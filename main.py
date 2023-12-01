@@ -66,7 +66,7 @@ def read_epub(file_path: str) -> Tuple[str, dict]:
     item = book.get_item_with_href(chapter)
     soup = BeautifulSoup(item.content, "html.parser")
     elements = soup.find_all(["p", "h1", "h2", "h3", "h4", "h5", "h6"])
-    chapter_start_index = None
+    starting_line = None
     blacklist_found = False
 
     for i, element in enumerate(elements[:3]):
@@ -74,11 +74,11 @@ def read_epub(file_path: str) -> Tuple[str, dict]:
       if any(blacklist_word in text for blacklist_word in blacklist):
         blacklist_found = True
         break
-      if "chapter" in text and chapter_start_index is None:
-        chapter_start_index = i + 1
+      if ("chapter" in text or re.search(r"\d+", text)) and not starting_line:
+        starting_line = i + 1
 
-    if chapter_start_index and not blacklist_found:
-      chapter_text = "\n".join(el.get_text().strip() for el in elements[chapter_start_index:])
+    if starting_line and not blacklist_found:
+      chapter_text = "\n".join(tag.get_text().strip() for tag in elements[starting_line:])
       combined_content.append(chapter_text)
 
   book_content = "\n***\n".join(combined_content)
@@ -126,9 +126,9 @@ def read_pdf(file_path: str) -> Tuple[str, str]:
 
   doc_info = pdf.metadata
 
-    
-  metadata["title"] = doc_info.title if doc_info.title else None
-  metadata["author"] = doc_info.author if doc_info.author else None
+  if doc_info:
+    metadata["title"] = doc_info.get("title")
+    metadata["author"] = doc_info.get("author")
 
   return book_content, metadata
 
