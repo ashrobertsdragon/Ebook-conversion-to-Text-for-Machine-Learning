@@ -41,6 +41,9 @@ def roman_to_int(roman: str) -> str:
 
     prev_value = value
 
+  if not total:
+    raise ValueError("Unknown number word")
+
 
   return str(total)
 
@@ -153,7 +156,37 @@ def convert_chapter_break(book_content: str) -> str:
       book_lines[i] = "***"
 
 
-  return "\n".join(book_lines)  
+  return "\n".join(book_lines)
+
+def _extract_chapter_text(item) -> str:
+  """
+  Extracts text from a chapter item.
+
+  Argumentss:
+threa    item: ebooklib item representing a chapter.
+
+  Returns string containing the text of the chapter.
+  """
+
+  soup = BeautifulSoup(item.content, "html.parser")
+  elements = soup.find_all(["p", "h1", "h2", "h3", "h4", "h5", "h6"])
+
+  for i, element in enumerate(elements[:3]):
+    text = element.get_text().strip().lower()
+
+    if any(non_chapter_word in text for non_chapter_word in NOT_CHAPTER):
+
+
+     return ""
+
+    if is_chapter(element):
+      starting_line = i + 1
+
+
+      return "\n".join(tag.get_text().strip() for tag in elements[starting_line:])
+
+
+  return ""
 
 def read_epub(file_path: str) -> Tuple[str, dict]:
   """
@@ -166,8 +199,7 @@ def read_epub(file_path: str) -> Tuple[str, dict]:
   """
   
   book_content = ""
-  chapter_files = []
-  combined_content = []
+  chapter_contents = []
   metadata = {}
 
   book = epub.read_epub(file_path, options={"ignore_ncx": True})
@@ -175,34 +207,13 @@ def read_epub(file_path: str) -> Tuple[str, dict]:
   metadata['author'] = next((item[0] for item in book.get_metadata('DC', 'creator')), None)
 
   for item in book.get_items():
-    if item.get_type() == ebooklib.ITEM_DOCUMENT:
-      item_href = item.file_name
-      if not any(not_chapter_word in item_href.lower() for not_chapter_word in NOT_CHAPTER):
-        chapter_files.append(item_href)  
+    if item.get_type() == ebooklib.ITEM_DOCUMENT and not any(not_chapter_word in item.file_name.lower() for not_chapter_word in NOT_CHAPTER):
+      chapter_contents.append(_extract_chapter_text(item))
+      
+  book_content = "\n***\n".join(chapter_contents)
 
-  for chapter in chapter_files:
-    item = book.get_item_with_href(chapter)
-    soup = BeautifulSoup(item.content, "html.parser")
-    elements = soup.find_all(["p", "h1", "h2", "h3", "h4", "h5", "h6"])
-    starting_line = None
-    blacklist_found = False
-
-    for i, element in enumerate(elements[:3]):
-      text = element.get_text().strip().lower()
-      if any(blacklist_word in text for blacklist_word in blacklist):
-        blacklist_found = True
-        break
-      if ("chapter" in text or re.search(r"\d+", text)) and not starting_line:
-        starting_line = i + 1
-
-    if starting_line and not blacklist_found:
-      chapter_text = "\n".join(tag.get_text().strip() for tag in elements[starting_line:])
-      combined_content.append(chapter_text)
-
-  book_content = "\n***\n".join(combined_content)
 
   return book_content, metadata
-
 
 def read_docx(file_path: str) -> Tuple[str, dict]:
   """
