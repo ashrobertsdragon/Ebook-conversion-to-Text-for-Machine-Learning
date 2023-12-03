@@ -221,6 +221,30 @@ def convert_chapter_break(book_content: str) -> str:
 
   return "\n".join(book_lines)
 
+
+def desmarten_text(book_content: str) -> str:
+  """
+  Replace smart punctuation in the given text with regular ASCII punctuation.
+
+  Arguments:
+    book_content (str): The input text containing smart punctuation.
+
+  Returns str: The text with smart punctuation replaced by regular punctuation.
+  """
+
+  punctuation_map = {
+    "‘": "'", "’": "'",
+    "“": '"', "”": '"',
+    "–": "-", "—": "-",
+    "…": "...", "•": "*"
+  }
+
+  for smart, regular in punctuation_map.items():
+    book_content = book_content.replace(smart, regular)
+
+
+  return text
+
 def read_docx(file_path: str) -> Tuple[str, dict]:
   """
   Reads the contents of a docx file and returns it as a string.
