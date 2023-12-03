@@ -1,5 +1,4 @@
 import os
-import re
 from typing import Tuple
 
 import docx
@@ -12,7 +11,7 @@ from common_functions import read_text_file, write_json_file, write_to_file
 
 NOT_CHAPTER = ["about", "acknowledgements", "afterward", "annotation", "appendix", "assessment", "backmatter", "bibliography", "colophon", "conclusion", "contents", "contributors", "copyright", "cover", "credits", "dedication", "division", "endnotes", "epigraph", "errata", "footnotes", "forward", "frontmatter", "glossary", "imprintur", "imprint", "index", "introduction", "landmarks", "list", "notice", "page", "preamble", "preface", "prologue", "question", "rear", "revision", "table", "toc", "volume", "warning"]
 
-def roman_to_int(roman: str) -> str:
+def roman_to_int(roman: str) -> int:
   """
   Convert a Roman numeral to an integer.
 
@@ -32,6 +31,8 @@ def roman_to_int(roman: str) -> str:
   prev_value = 0
 
   for char in reversed(roman):
+    if char not in roman_numerals:
+      raise ValueError("not Romman numeral")
     value = roman_numerals[char]
 
     if value < prev_value:
@@ -42,16 +43,16 @@ def roman_to_int(roman: str) -> str:
     prev_value = value
 
   if not total:
-    raise ValueError("Unknown number word")
+    raise ValueError("Not roman numeral")
 
+  
+  return total
 
-  return str(total)
-
-def word_to_num_str(number_str: str) -> str:
+def word_to_num(number_str: str) -> int:
   """
   Convert a spelled-out number without spaces or hyphens to a string of the integer.  The function supports numbers from 0 to 99 and is case insensitive.
 
-  Argumentss:
+  Arguments:
     number_str (str): A string representing the spelled-out number.
 
   Returns str: The string representation of the integer value of the spelled-out number.
@@ -73,23 +74,25 @@ def word_to_num_str(number_str: str) -> str:
   number_str = number_str.lower()
 
   total = 0
-  temp_word = ''
+  temp_word = ""
 
   for char in number_str:
     temp_word += char
 
     if temp_word in num_words:
       total += num_words[temp_word]
-      temp_word = ''
+      temp_word = ""
     elif temp_word in tens_words:
       total += tens_words[temp_word]
-      temp_word = ''
+      temp_word = ""
 
   if temp_word:
       raise ValueError(f"Unknown number word: {temp_word}")
 
+  
+  return total
 
-  return str(total)
+
 
 def is_chapter(s: str) -> bool:
   """
@@ -107,63 +110,47 @@ def is_chapter(s: str) -> bool:
     """
 
     
-    return s.isdigit() or is_roman_numeral(s) or is_spelled_out_number(s):
-  
+    return s.isdigit() or is_roman_numeral(s) or is_spelled_out_number(s)
+    
   def is_roman_numeral(word: str) -> bool:
- 
-    try:
-        roman_to_int(word)
+    """Try to convert the word to an integer. If it's not a valid roman numeral, it will raise a ValueError"""
 
-      
-        return True
-    
-    except ValueError:
-    
-      
-      return False
-
-  def is_spelled_out_number(word: str) -> bool:
-    """Try to convert the word to an integer. If it's not a valid spelled-out number, it will raise a ValueError"""
-    
     try:
-      word_to_num_str(word)
-      
-      
+      roman_to_int(word)
+
+
       return True
 
     except ValueError:
-    
-      
+
+
       return False
 
-  words = s.lower().split()
+  def is_spelled_out_number(s: str) -> bool:
+    """Try to convert the word to an integer. If it's not a valid spelled-out number, it will raise a ValueError"""
+
+    try:
+      word_to_num(s)
+
+
+      return True
+
+    except ValueError:
+
+
+      return False
+
+  lower_s = s.lower()
 
   
-  return any(word == "chapter" or is_number(word) for word in words)
-
-def convert_chapter_break(book_content: str) -> str:
-  """
-  Converts chapter breaks to three askerisks
-  
-  Arguments:
-  book_content: The content of the book.
-  
-  Returns the book content with askerisks for chapter breaks."""
-
-  book_lines = book_content.split("\n")
-  for i, line in enumerate(book_lines):
-    if is_chapter(line) and i != 0:
-      book_lines[i] = "***"
-
-
-  return "\n".join(book_lines)
+  return lower_s.startswith("chapter") or (len(lower_s.split()) == 1 and is_number(lower_s))
 
 def _extract_chapter_text(item) -> str:
   """
   Extracts text from a chapter item.
 
-  Argumentss:
-threa    item: ebooklib item representing a chapter.
+  Arguments:
+    item: ebooklib item representing a chapter.
 
   Returns string containing the text of the chapter.
   """
@@ -173,18 +160,17 @@ threa    item: ebooklib item representing a chapter.
 
   for i, element in enumerate(elements[:3]):
     text = element.get_text().strip().lower()
-
+    
     if any(non_chapter_word in text for non_chapter_word in NOT_CHAPTER):
 
 
      return ""
 
-    if is_chapter(element):
+    elif is_chapter(text):
       starting_line = i + 1
 
 
       return "\n".join(tag.get_text().strip() for tag in elements[starting_line:])
-
 
   return ""
 
@@ -208,12 +194,32 @@ def read_epub(file_path: str) -> Tuple[str, dict]:
 
   for item in book.get_items():
     if item.get_type() == ebooklib.ITEM_DOCUMENT and not any(not_chapter_word in item.file_name.lower() for not_chapter_word in NOT_CHAPTER):
-      chapter_contents.append(_extract_chapter_text(item))
+      chapter_text = _extract_chapter_text(item)
+      if chapter_text:
+        chapter_contents.append(_extract_chapter_text(item))
       
   book_content = "\n***\n".join(chapter_contents)
 
 
   return book_content, metadata
+
+def convert_chapter_break(book_content: str) -> str:
+  """
+  Converts chapter breaks to three askerisks
+
+  Arguments:
+    book_content: The content of the book.
+
+  Returns the book content with askerisks for chapter breaks."""
+
+  flagged_lines = []
+  book_lines = book_content.split("\n")
+  for i, line in enumerate(book_lines):
+    if is_chapter(line) and i != 0:
+      book_lines[i] = "***"
+
+
+  return "\n".join(book_lines)
 
 def read_docx(file_path: str) -> Tuple[str, dict]:
   """
@@ -261,7 +267,7 @@ def read_pdf(file_path: str) -> Tuple[str, str]:
 
   return book_content, metadata
 
-def convert_file(book_name: str, folder_name: str) -> None:
+def convert_file(folder_name: str, book_name: str) -> None:
   """
   Converts a book to a text file with 3 asterisks for chapter breaks
   
@@ -273,7 +279,8 @@ def convert_file(book_name: str, folder_name: str) -> None:
   """
 
   book_content = ""
-  file_path = f"{folder_name}/{book_name}"
+  file_path = os.path.join(folder_name, book_name)
+
 
   book_name = book_name.replace(" ", "_")
   book_name = book_name.replace("-", "_")
@@ -297,14 +304,18 @@ def convert_file(book_name: str, folder_name: str) -> None:
     print("Invalid filetype")
     exit()
 
-  # book_content = convert_chapter_break(book_content)
+  book_content = convert_chapter_break(book_content)
 
   book_name = f"{base_name}.txt"
-  write_to_file(book_content, book_name)
+  processed_files_path = os.path.join(folder_name, "processed")
+  book_path = os.path.join(processed_files_path, book_name)
+  write_to_file(book_content, book_path)
   if metadata:
-    write_json_file(metadata, f"metadata_{book_name}.json")
+    metadata_path = os.path.join(processed_files_path, f"{base_name}_metadata.json")
+    write_json_file(metadata, metadata_path)
 
 folder_name = "folder"
-
 for book_name in os.listdir(folder_name):
-  convert_file(book_name, folder_name)
+  full_path = os.path.join(folder_name, book_name)
+  if os.path.isfile(full_path):
+    convert_file(folder_name, book_name)

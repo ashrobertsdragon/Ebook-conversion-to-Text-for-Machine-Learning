@@ -1,4 +1,7 @@
 __pycache__/
 .git/
 .pythonlibs/
-folder/
+folder/*
+
+poetry.lock
+pyproject.toml
