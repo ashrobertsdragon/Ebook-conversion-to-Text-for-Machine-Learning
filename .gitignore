@@ -1,7 +1,10 @@
 __pycache__/
 .git/
 .pythonlibs/
+.upm/
+
 folder/*
 
 poetry.lock
 pyproject.toml
+.replit
