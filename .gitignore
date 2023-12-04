@@ -3,8 +3,9 @@ __pycache__/
 .pythonlibs/
 .upm/
 
-folder/*
+folder/
 
 poetry.lock
 pyproject.toml
 .replit
+replit.nix
