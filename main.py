@@ -1,5 +1,4 @@
 import os
-from typing import Tuple
 
 import docx
 import ebooklib
@@ -9,7 +8,7 @@ from PyPDF2 import PdfReader
 
 from common_functions import read_text_file, write_json_file, write_to_file
 
-NOT_CHAPTER = ["about", "acknowledgements", "afterward", "annotation", "appendix", "assessment", "backmatter", "bibliography", "colophon", "conclusion", "contents", "contributors", "copyright", "cover", "credits", "dedication", "division", "endnotes", "epigraph", "errata", "footnotes", "forward", "frontmatter", "glossary", "imprintur", "imprint", "index", "introduction", "landmarks", "list", "notice", "page", "preamble", "preface", "prologue", "question", "rear", "revision", "table", "toc", "volume", "warning"]
+NOT_CHAPTER = ["about", "acknowledgements", "afterward", "annotation", "appendix", "assessment", "backmatter", "bibliography", "colophon", "conclusion", "contents", "contributors", "copyright", "cover", "credits", "dedication", "division", "endnotes", "epigraph", "errata", "footnotes", "forward", "frontmatter", "glossary", "imprintur", "imprint", "index", "introduction", "landmarks", "list", "notice", "page", "preamble", "preface", "prologue", "question", "rear", "revision", "sign up", "table", "toc", "volume", "warning"]
 
 def roman_to_int(roman: str) -> int:
   """
@@ -145,7 +144,7 @@ def is_chapter(s: str) -> bool:
   
   return lower_s.startswith("chapter") or (len(lower_s.split()) == 1 and is_number(lower_s))
 
-def _extract_chapter_text(item) -> str:
+def _extract_epub_chapter_text(item) -> str:
   """
   Extracts text from a chapter item.
 
@@ -174,7 +173,7 @@ def _extract_chapter_text(item) -> str:
 
   return ""
 
-def read_epub(file_path: str) -> Tuple[str, dict]:
+def read_epub(file_path: str) -> str:
   """
   Reads the contents of an epub file and returns it as a string.
 
@@ -186,41 +185,19 @@ def read_epub(file_path: str) -> Tuple[str, dict]:
   
   book_content = ""
   chapter_contents = []
-  metadata = {}
 
   book = epub.read_epub(file_path, options={"ignore_ncx": True})
-  metadata['title'] = next((item[0] for item in book.get_metadata('DC', 'title')), None)
-  metadata['author'] = next((item[0] for item in book.get_metadata('DC', 'creator')), None)
 
   for item in book.get_items():
     if item.get_type() == ebooklib.ITEM_DOCUMENT and not any(not_chapter_word in item.file_name.lower() for not_chapter_word in NOT_CHAPTER):
-      chapter_text = _extract_chapter_text(item)
+      chapter_text = _extract_epub_chapter_text(item)
       if chapter_text:
         chapter_contents.append(_extract_chapter_text(item))
       
   book_content = "\n***\n".join(chapter_contents)
 
 
-  return book_content, metadata
-
-def convert_chapter_break(book_content: str) -> str:
-  """
-  Converts chapter breaks to three askerisks
-
-  Arguments:
-    book_content: The content of the book.
-
-  Returns the book content with askerisks for chapter breaks."""
-
-  flagged_lines = []
-  book_lines = book_content.split("\n")
-  for i, line in enumerate(book_lines):
-    if is_chapter(line) and i != 0:
-      book_lines[i] = "***"
-
-
-  return "\n".join(book_lines)
-
+  return book_content
 
 def desmarten_text(book_content: str) -> str:
   """
@@ -243,9 +220,61 @@ def desmarten_text(book_content: str) -> str:
     book_content = book_content.replace(smart, regular)
 
 
-  return text
+  return book_content
 
-def read_docx(file_path: str) -> Tuple[str, dict]:
+def convert_chapter_break(book_content: str) -> str:
+  """
+  Converts chapter breaks to three askerisks
+
+  Arguments:
+    book_content: The content of the book.
+
+  Returns the book content with askerisks for chapter breaks."""
+
+  book_lines = book_content.split("\n")
+
+  def replace_chapter_break(line: str) -> str:
+    if is_chapter(line):
+
+      
+      return "***"
+
+    else:
+
+
+      return line
+  
+
+
+  return "\n".join(replace_chapter_break(line) for line in book_lines)
+
+def _docx_contains_page_break(paragraph):
+  """
+  Checks if the given paragraph contains a page break.
+
+  Arguments:
+    paragraph: A paragraph from a docx document.
+
+  Returns True if a page break is found, False otherwise.
+  """
+
+  for run in paragraph.runs:
+    if "<w:lastRenderedPageBreak/>" in run._element.xml or "<w:br " in run.element.xml:
+      return True
+    return False
+
+def is_not_chapter(paragraph: str, metadata: dict) -> bool:
+  """
+  Checks if the given line is not a chapter.
+  """
+  title = metadata.get("title", "no title found")
+  author = metadata.get("author", "no author found")
+  paragraph = paragraph.lower()
+
+
+  return any(paragraph.startswith(title.lower()) or paragraph.startswith(author.lower()) or paragraph.startswith(not_chapter_word) for not_chapter_word in NOT_CHAPTER)
+  
+def read_docx(file_path: str, metadata: dict) -> str:
   """
   Reads the contents of a docx file and returns it as a string.
   
@@ -254,21 +283,56 @@ def read_docx(file_path: str) -> Tuple[str, dict]:
 
   Returns the contents of the docx file as a string.
   """
-  
-  metadata = {}
+
+  current_page = []
+  pages = []
+  line_counter = 0
+  max_lines_to_check = 3
+  flagged = []
+  chapter_header = False
+  not_chapter_flag = False
 
   doc = docx.Document(file_path)
-  
-  book_content = "\n".join([paragraph.text for paragraph in doc.paragraphs])
 
-  core_properties = doc.core_properties
-  metadata["title"] = core_properties.title if core_properties.title else None
-  metadata["author"] = core_properties.author if core_properties.author else None
+  for paragraph in doc.paragraphs:
+    paragraph_text = paragraph.text.strip()
+    if _docx_contains_page_break(paragraph) and current_page:
+      pages.append("\n".join(current_page))
+      chapter_header = False
+      not_chapter_flag = False
+      current_page = []
+      line_counter = 0
+
+    if not paragraph_text:
+      continue
+    elif is_chapter(paragraph_text):
+      chapter_header = True
+      not_chapter_flag = False
+      flagged.append(f"chapter header: {paragraph_text}")
+      if pages:
+        paragraph_text = "***"
+      else:
+        continue
+    elif line_counter < max_lines_to_check and not chapter_header and is_not_chapter(paragraph_text, metadata):
+      not_chapter_flag = True
+      current_page = []
+      continue
+    elif not_chapter_flag is True:
+        continue
+        
+    current_page.append(paragraph_text)
+    line_counter += 1
+
+  if current_page:
+    pages.append("\n".join(current_page))   
+   
+  book_content = "\n".join(pages)
 
 
-  return book_content, metadata
- 
-def read_pdf(file_path: str) -> Tuple[str, str]:
+  write_json_file(flagged, "flagged.json")
+  return book_content
+
+def read_pdf(file_path: str, metadata: dict) -> str:
   """
   Reads the contents of a pdf file and returns it as a string.
   
@@ -277,19 +341,13 @@ def read_pdf(file_path: str) -> Tuple[str, str]:
   
   Returns the contents of the pdf file as a string.
   """
-
-  metadata = {}
   
   pdf = PdfReader(file_path)
   book_content = "\n".join([page.extract_text() for page in pdf.pages])
+  book_content = convert_chapter_break(book_content)
 
-  doc_info = pdf.metadata
 
-  if doc_info:
-    metadata["title"] = doc_info.get("title")
-    metadata["author"] = doc_info.get("author")
-
-  return book_content, metadata
+  return book_content
 
 def convert_file(folder_name: str, book_name: str) -> None:
   """
@@ -305,7 +363,6 @@ def convert_file(folder_name: str, book_name: str) -> None:
   book_content = ""
   file_path = os.path.join(folder_name, book_name)
 
-
   book_name = book_name.replace(" ", "_")
   book_name = book_name.replace("-", "_")
   filename_list = book_name.split(".")
@@ -314,32 +371,30 @@ def convert_file(folder_name: str, book_name: str) -> None:
   else:
     base_name = filename_list[0]
   extension = filename_list[-1]
-  
+
+  metadata= {"title": "Dragon Run", "author": "Ash Roberts"}
   if extension == "epub":
-    book_content, metadata = read_epub(file_path)
+    book_content = read_epub(file_path)
   elif extension == "docx":
-    book_content, metadata = read_docx(file_path)
+    book_content = read_docx(file_path, metadata)
   elif extension == "pdf":
-    book_content, metadata = read_pdf(file_path)
+    book_content = read_pdf(file_path, metadata)
   elif extension == "txt" or extension == "text":
     book_content = read_text_file(file_path)
-    metadata = {}
   else:
     print("Invalid filetype")
     exit()
 
-  book_content = convert_chapter_break(book_content)
+  book_content = desmarten_text(book_content)
 
   book_name = f"{base_name}.txt"
   processed_files_path = os.path.join(folder_name, "processed")
   book_path = os.path.join(processed_files_path, book_name)
   write_to_file(book_content, book_path)
-  if metadata:
-    metadata_path = os.path.join(processed_files_path, f"{base_name}_metadata.json")
-    write_json_file(metadata, metadata_path)
 
 folder_name = "folder"
 for book_name in os.listdir(folder_name):
   full_path = os.path.join(folder_name, book_name)
   if os.path.isfile(full_path):
     convert_file(folder_name, book_name)
+    
