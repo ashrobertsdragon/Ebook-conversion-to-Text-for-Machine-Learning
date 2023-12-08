@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from ebooklib import epub
 from PyPDF2 import PdfReader
 
-from common_functions import read_text_file, write_json_file, write_to_file
+from common_functions import read_text_file, write_to_file
 
 NOT_CHAPTER = ["about", "acknowledgements", "afterward", "annotation", "appendix", "assessment", "backmatter", "bibliography", "colophon", "conclusion", "contents", "contributors", "copyright", "cover", "credits", "dedication", "division", "endnotes", "epigraph", "errata", "footnotes", "forward", "frontmatter", "glossary", "imprintur", "imprint", "index", "introduction", "landmarks", "list", "notice", "page", "preamble", "preface", "prologue", "question", "rear", "revision", "sign up", "table", "toc", "volume", "warning"]
 
@@ -173,7 +173,7 @@ def _extract_epub_chapter_text(item) -> str:
 
   return ""
 
-def read_epub(file_path: str) -> str:
+def read_epub(file_path: str, metadata: dict) -> str:
   """
   Reads the contents of an epub file and returns it as a string.
 
@@ -189,10 +189,10 @@ def read_epub(file_path: str) -> str:
   book = epub.read_epub(file_path, options={"ignore_ncx": True})
 
   for item in book.get_items():
-    if item.get_type() == ebooklib.ITEM_DOCUMENT and not any(not_chapter_word in item.file_name.lower() for not_chapter_word in NOT_CHAPTER):
+    if item.get_type() == ebooklib.ITEM_DOCUMENT and not is_not_chapter(item.file_name.lower(), metadata):
       chapter_text = _extract_epub_chapter_text(item)
       if chapter_text:
-        chapter_contents.append(_extract_chapter_text(item))
+        chapter_contents.append(_extract_epub_chapter_text(item))
       
   book_content = "\n***\n".join(chapter_contents)
 
@@ -288,7 +288,6 @@ def read_docx(file_path: str, metadata: dict) -> str:
   pages = []
   line_counter = 0
   max_lines_to_check = 3
-  flagged = []
   chapter_header = False
   not_chapter_flag = False
 
@@ -308,7 +307,6 @@ def read_docx(file_path: str, metadata: dict) -> str:
     elif is_chapter(paragraph_text):
       chapter_header = True
       not_chapter_flag = False
-      flagged.append(f"chapter header: {paragraph_text}")
       if pages:
         paragraph_text = "***"
       else:
@@ -329,8 +327,53 @@ def read_docx(file_path: str, metadata: dict) -> str:
   book_content = "\n".join(pages)
 
 
-  write_json_file(flagged, "flagged.json")
   return book_content
+
+def _parse_pdf_page(page: str, metadata: dict) -> str:
+  """
+  Parses the given pdf page and returns it as a string.
+  
+  Arguments:
+    page: A pdf page.
+    
+  Returns the pdf page as a string.
+  """
+  chapter_list = []
+  text_lines = 0
+  paragraph = ""
+  paragraph_list = []
+  
+  def parse_paragraph(paragraph: str) -> list:
+    nonlocal text_lines
+
+    if text_lines < 3:
+      if is_not_chapter(paragraph, metadata):
+        return []
+      elif is_chapter(paragraph):
+        paragraph = "\n***\n"
+    chapter_list.append(paragraph)
+    text_lines += 1
+    return chapter_list
+  
+  lines = page.split("\n")
+  for line in lines:
+    line = line.strip()
+    if line:
+      paragraph_list.append(line)
+    elif paragraph_list:
+      paragraph = "".join(paragraph_list)
+      chapter_list = parse_paragraph(paragraph)
+      if not chapter_list:
+        return ""
+      paragraph_list = []
+
+  if paragraph_list:
+    paragraph = " ".join(paragraph_list)
+    chapter_list = parse_paragraph(paragraph)
+    if not chapter_list:
+      return ""
+  
+  return "\n".join(chapter_list)
 
 def read_pdf(file_path: str, metadata: dict) -> str:
   """
@@ -341,10 +384,17 @@ def read_pdf(file_path: str, metadata: dict) -> str:
   
   Returns the contents of the pdf file as a string.
   """
+  pdf_pages = []
   
   pdf = PdfReader(file_path)
-  book_content = "\n".join([page.extract_text() for page in pdf.pages])
-  book_content = convert_chapter_break(book_content)
+  
+  for page in pdf.pages:
+    page_text = page.extract_text()
+    pdf_page = _parse_pdf_page(page_text, metadata)
+    if pdf_page:
+      pdf_pages.append(pdf_page)
+
+  book_content = "\n".join(pdf_pages)
 
 
   return book_content
@@ -374,7 +424,7 @@ def convert_file(folder_name: str, book_name: str) -> None:
 
   metadata= {"title": "Dragon Run", "author": "Ash Roberts"}
   if extension == "epub":
-    book_content = read_epub(file_path)
+    book_content = read_epub(file_path, metadata)
   elif extension == "docx":
     book_content = read_docx(file_path, metadata)
   elif extension == "pdf":
