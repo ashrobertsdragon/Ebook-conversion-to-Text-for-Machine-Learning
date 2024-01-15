@@ -1,0 +1,12 @@
+beautifulsoup4==4.12.2
+bs4==0.0.1
+docx==0.2.4
+EbookLib==0.18
+lxml==4.9.3
+Pillow==10.1.0
+PyMuPDF==1.23.7
+PyMuPDFb==1.23.7
+pypdf2==3.0.1
+python-docx-1==0.0.2
+six==1.16.0
+soupsieve==2.5
