@@ -37,3 +37,21 @@ Contributions to this project are welcome. Please ensure that your code follows 
 
 ## License
 This project is licensed by ProsePal LLC under the MIT license
+
+## Version History
+
+- **v0.1.0** (Release date: November 30, 2023)
+  - Initial release
+
+- **v0.1.1** (Release date: December 2, 2023)
+  - fixed false positives for is_number
+
+- **v0.2.0** (Release date: December 3, 2023)
+  - Conversion of docx files
+
+- **v0.3.0** (Release date: December 8, 2023)
+  - Conversion of PDF files
+
+- **v0.3.1** (Release date: Januar 23, 2024)
+  - fixed concantation of text in pdf conversion
+  - updated pillow version to secure version
