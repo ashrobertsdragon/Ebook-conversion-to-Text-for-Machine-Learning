@@ -11,7 +11,7 @@ This Python script provides functionality for converting various ebook file form
 - **Text Standardization**: Replaces smart punctuation with ASCII equivalents.
 
 ## Requirements
-To run this script, you need Python 3 and the following packages:
+To run this script, you need Python 3.8 or above and the following packages:
 - `python-docx`
 - `ebooklib`
 - `requests`
@@ -55,3 +55,6 @@ This project is licensed by ProsePal LLC under the MIT license
 - **v0.3.1** (Release date: Januar 23, 2024)
   - fixed concantation of text in pdf conversion
   - updated pillow version to secure version
+
+- **v1.0.0** (Release date: January 23, 2024)
+  - created library instead of single module
