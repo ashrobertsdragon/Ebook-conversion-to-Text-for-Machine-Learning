@@ -4,7 +4,7 @@ charset-normalizer>=2<4
 EbookLib==0.18
 idna>2.5.0<4
 lxml>3.1.0
-python-docx=>1.1.0
+python-docx>=1.1.0
 python-dotenv>=1.0.1
 pillow>=10.2.0
 requests==2.31.0
