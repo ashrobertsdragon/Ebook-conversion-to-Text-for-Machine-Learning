@@ -1,6 +1,8 @@
 import pytest
 from ebook_conversion.chapter_check import roman_to_int, word_to_num, is_number, is_chapter, is_not_chapter, NOT_CHAPTER
 
+
+
 IS_NOT_CHAPTER_TEST_METADATA = {
     "title": "Test Book",
     "author": "John Doe"
@@ -123,7 +125,7 @@ def test_is_not_chapter_no_metadata():
     assert result is True
 
 def test_is_not_chapter_case_insensitive():
-    metadata = TEST_METADATA.copy()
+    metadata = IS_NOT_CHAPTER_TEST_METADATA.copy()
     paragraph = "PROLOGUE"
     result = is_not_chapter(paragraph, metadata)
     assert result is True
@@ -131,7 +133,7 @@ def test_is_not_chapter_case_insensitive():
 def test_is_not_chapter_customized_words():
     not_chapter_words = NOT_CHAPTER.copy()
     not_chapter_words.append("appendix")
-    metadata = TEST_METADATA.copy()
+    metadata = IS_NOT_CHAPTER_TEST_METADATA.copy()
     paragraph = "Appendix A"
     result = is_not_chapter(paragraph, metadata, not_chapter_words=not_chapter_words)
     assert result is True
