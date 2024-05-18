@@ -3,7 +3,7 @@ __pycache__/
 .pythonlibs/
 .upm/
 .local/
-
+.venv/
 folder/
 
 poetry.lock
