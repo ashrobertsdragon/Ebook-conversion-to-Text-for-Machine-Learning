@@ -47,20 +47,24 @@ def run_ocr(base64_images: list) -> str:
               "type":
               "text",
               "text":
-              ("Please provide the text in these images as a single combined "
-               "statement with spaces as appropriate without any commentary. Use "
-               "your judgment on whether consecutive images are a single word or "
-               "multiple words. If there is no text in the image, or it is "
-               "unreadable, respond with 'No text found'")
+              (
+                "Please provide the text in these images as a single combined "
+                "statement with spaces as appropriate without any commentary. Use "
+                "your judgment on whether consecutive images are a single word or "
+                "multiple words. If there is no text in the image, or it is "
+                "unreadable, respond with 'No text found'"
+              )
           }, *image_role_list]
       }],
       "max_tokens":
       10
   }
   try:
-    response = requests.post("https://api.openai.com/v1/chat/completions",
-                             headers=headers,
-                             json=payload)
+    response = requests.post(
+      "https://api.openai.com/v1/chat/completions",
+      headers=headers,
+      json=payload
+    )
     if response.json()["choices"]:
       answer = response.json()["choices"][0]["message"]["content"]
       return answer
