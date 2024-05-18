@@ -9,6 +9,7 @@ folder/
 
 *.toml
 *.lock
+*.log
 
 .replit
 replit.nix
