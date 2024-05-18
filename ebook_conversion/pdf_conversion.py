@@ -2,7 +2,7 @@ import base64
 import logging
 import re
 from io import BytesIO
-from typing import Any, Tuple
+from typing import Any, Tuple, Union
 
 from pdfminer.pdfparser import PDFParser
 from pdfminer.pdfdocument import PDFDocument
@@ -15,7 +15,6 @@ from PIL import Image
 from .chapter_check import is_chapter, is_not_chapter
 from .ocr import run_ocr
 from .text_conversion import desmarten_text
-from .file_handling import write_to_file
 
 
 error_logger = logging.getLogger("error_logger")
@@ -108,7 +107,7 @@ def parse_img_obj(file_path: str, obj_nums: list) -> str:
   text = run_ocr(base64_images) if base64_images else ""
   return text
 
-def process_element(element: Any) -> [Tuple[str, Any], None]:
+def process_element(element: Any) -> Tuple[str, Union[Any, None]]:
   """
   Processes a PDF layout element to identify its type and extract relevant
   data.
