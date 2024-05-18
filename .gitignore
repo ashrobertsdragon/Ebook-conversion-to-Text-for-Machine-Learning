@@ -4,9 +4,11 @@ __pycache__/
 .upm/
 .local/
 .venv/
+.vscode/
 folder/
 
-poetry.lock
-pyproject.toml
+*.toml
+*.lock
+
 .replit
 replit.nix
