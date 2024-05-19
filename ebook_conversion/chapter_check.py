@@ -9,29 +9,74 @@ NOT_CHAPTER = {
     "warning"
 }
 
-def roman_to_int(roman: str) -> int:
+def roman_to_int(roman_num: str) -> int:
     """
     Convert a Roman numeral to an integer.
     Arguments:
       roman (str): A string representing the Roman numeral.
     Returns int: The integer value of the Roman numeral.
     """
-
-    roman_numerals = {
-      'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000
+    print(roman_num)
+    if not isinstance(roman_num, str):
+        raise TypeError("Input must be a string")
+    
+    roman: str = roman_num.upper()
+    print(roman)
+    for numeral in ("X", "C", "M"):
+        print(f"numeral: {numeral} count: {roman.count(numeral)}")
+        if roman.count(numeral) > 4:
+            raise ValueError("Not roman numeral")
+    print(f"numeral: I count: {roman.count("I")}")
+    if roman.count("I") > 3:
+        raise ValueError("Not roman numeral")
+    for numeral in ("V", "L", "D"):
+        if roman.count(numeral) > 1:
+            print(f"numeral: {numeral} count: {roman.count(numeral)}")
+            raise ValueError("Not roman numeral")
+        
+    ROMAN_NUMERALS = {
+        "I": 1, 
+        "V": 5, 
+        "X": 10, 
+        "L": 50, 
+        "C": 100, 
+        "D": 500, 
+        "M": 1000
     }
-    roman = roman.upper()
-    total = 0
-    prev_value = 0
+    
+    total: int = 0
+    prev_value: int = 0
+    consecutive_count: int = 1
+    previous_char: str = ""
+    
     for char in reversed(roman):
-      if char not in roman_numerals:
-        raise ValueError("not Roman numeral")
-      value = roman_numerals[char]
-      if value < prev_value:
-        total -= value
-      else:
-        total += value
-      prev_value = value
+        print(f"Char: {char}")
+        if char not in ROMAN_NUMERALS:
+            raise ValueError("Not roman numeral")
+  
+        consecutive_count = consecutive_count + 1 if char == previous_char else 1
+        print(f"consecutive letters: {consecutive_count}")
+        if consecutive_count > 3:
+            raise ValueError("Not roman numeral")
+
+        value = ROMAN_NUMERALS[char]
+        print(f"char {char} value: {value}")
+        if value >= prev_value:
+            total += value
+            print(total)
+        else:
+            print(f"char {char} and prev_char {previous_char}")
+            if previous_char == "":
+                raise ValueError("Not roman numeral")
+            elif previous_char in ("V", "X") and char != "I":
+                raise ValueError("Not roman numeral")
+            elif previous_char in ("L", "C") and char != "X":
+                raise ValueError("Not roman numeral")
+            elif previous_char in ("D", "M") and char != "C":
+                raise ValueError("Not roman numeral")
+            total -= value
+        prev_value = value
+        previous_char = char
     if not total:
       raise ValueError("Not roman numeral")
     return total
@@ -46,14 +91,15 @@ def word_to_num(number_str: str) -> int:
     """
 
     num_words = {
-      'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4,
-      'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9,
-      'ten': 10, 'eleven': 11, 'twelve': 12, 'thirteen': 13,
-      'fourteen': 14, 'fifteen': 15, 'sixteen': 16,
-      'seventeen': 17, 'eighteen': 18, 'nineteen': 19,
-      'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50,
-      'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90
+      "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4,
+      "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+      "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13,
+      "fourteen": 14, "fifteen": 15, "sixteen": 16,
+      "seventeen": 17, "eighteen": 18, "nineteen": 19,
+      "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
+      "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90
     }
+    number_str = number_str.lower().replace("-", "").replace(" ", "")
     number_str = number_str.lower()
     total = 0
     temp_word = ""
@@ -68,27 +114,29 @@ def word_to_num(number_str: str) -> int:
 
 def is_spelled_out_number(s: str) -> bool:
     """
-    Try to convert the word to an integer. If it's not a valid spelled-out number,
+    Try to convert the word to an integer. If it"s not a valid spelled-out number,
     it will raise a ValueError
     """
 
     try:
-      word_to_num(s)
-      return True
+        word_to_num(s)
+        return True
     except ValueError:
-      return False
+        return False
 
 def is_roman_numeral(word: str) -> bool:
     """
-    Try to convert the word to an integer. If it's not a valid roman numeral,
+    Try to convert the word to an integer. If it"s not a valid roman numeral,
     it will raise a ValueError
     """
 
     try:
-      roman_to_int(word)
-      return True
+        roman_to_int(word)
+        return True
     except ValueError:
-      return False
+        return False
+    except TypeError:
+        return False
     
 def is_number(s: str) -> bool:
     """
@@ -101,7 +149,7 @@ def is_number(s: str) -> bool:
 
 def is_chapter(s: str) -> bool:
     """
-    Check if a string contains the word 'chapter', a Roman numeral, a 
+    Check if a string contains the word "chapter", a Roman numeral, a 
     spelled-out number, or a digit.
     Arguments:
       s (str): The string to check.
