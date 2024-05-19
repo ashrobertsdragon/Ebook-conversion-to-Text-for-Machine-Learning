@@ -16,22 +16,13 @@ def roman_to_int(roman_num: str) -> int:
       roman (str): A string representing the Roman numeral.
     Returns int: The integer value of the Roman numeral.
     """
-    print(roman_num)
     if not isinstance(roman_num, str):
         raise TypeError("Input must be a string")
     
     roman: str = roman_num.upper()
-    print(roman)
-    for numeral in ("X", "C", "M"):
-        print(f"numeral: {numeral} count: {roman.count(numeral)}")
-        if roman.count(numeral) > 4:
-            raise ValueError("Not roman numeral")
-    print(f"numeral: I count: {roman.count("I")}")
-    if roman.count("I") > 3:
-        raise ValueError("Not roman numeral")
+
     for numeral in ("V", "L", "D"):
         if roman.count(numeral) > 1:
-            print(f"numeral: {numeral} count: {roman.count(numeral)}")
             raise ValueError("Not roman numeral")
         
     ROMAN_NUMERALS = {
@@ -50,22 +41,17 @@ def roman_to_int(roman_num: str) -> int:
     previous_char: str = ""
     
     for char in reversed(roman):
-        print(f"Char: {char}")
         if char not in ROMAN_NUMERALS:
             raise ValueError("Not roman numeral")
   
         consecutive_count = consecutive_count + 1 if char == previous_char else 1
-        print(f"consecutive letters: {consecutive_count}")
         if consecutive_count > 3:
             raise ValueError("Not roman numeral")
 
         value = ROMAN_NUMERALS[char]
-        print(f"char {char} value: {value}")
         if value >= prev_value:
             total += value
-            print(total)
         else:
-            print(f"char {char} and prev_char {previous_char}")
             if previous_char == "":
                 raise ValueError("Not roman numeral")
             elif previous_char in ("V", "X") and char != "I":
