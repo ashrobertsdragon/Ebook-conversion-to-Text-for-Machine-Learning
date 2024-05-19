@@ -6,11 +6,11 @@ import docx
 from docx import Document
 from docx.text.paragraph import Paragraph
 
+from .abtract_book import BookConversion
 from .chapter_check import is_chapter, is_not_chapter
 from .ocr import run_ocr
-from .text_conversion import desmarten_text
 
-class DocxConverter():
+class DocxConverter(BookConversion):
     """
     Class to convert a Word document to structured text, extract images,
     perform OCR, and split content into chapters.
@@ -31,16 +31,14 @@ class DocxConverter():
         split_chapters: Splits the paragraphs into chapters.
     """
     def __init__(self, file_path: str, metadata: dict):
-        self.file_path = file_path
-        self.metadata = metadata
-        self.doc = self._read_file(file_path)
+        super().__init__(file_path, metadata)
         self.paragraphs = self.extract_paragraphs()
 
     def _read_file(self, file_path: str) -> Document:
         return docx.Document(file_path)
 
     def extract_paragraphs(self) -> list:
-        return self.doc.paragraphs
+        return self.book.paragraphs
 
     def _contains_page_break(self, paragraph: Paragraph) -> bool:
         """
@@ -86,7 +84,7 @@ class DocxConverter():
         
         return base64_images
 
-    def extract_paragraph_text(self, paragraph: Paragraph) -> str:
+    def extract_text(self, paragraph: Paragraph) -> str:
         """
         Extracts the text content from a paragraph in a Word document,
         performs optical character recognition (OCR) on any images present in
@@ -104,10 +102,6 @@ class DocxConverter():
             is_chapter(paragraph_text)
             or not is_not_chapter(paragraph_text, self.metadata)
         )
-    
-
-    def clean_text(self, paragraph_text: str) -> str:
-        return desmarten_text(paragraph_text)
 
     def _process_paragraph_text(self, paragraph_text: str, paragraph_index_of_chapter: int) -> Tuple[str, int]:
         """
@@ -143,7 +137,7 @@ class DocxConverter():
         paragraph_index_of_chapter: int = 0
 
         for paragraph in self.paragraphs:
-            paragraph_text = self.extract_paragraph_text(paragraph)
+            paragraph_text = self.extract_text(paragraph)
             paragraph_index_of_chapter += 1
 
             if self._contains_page_break(paragraph):
