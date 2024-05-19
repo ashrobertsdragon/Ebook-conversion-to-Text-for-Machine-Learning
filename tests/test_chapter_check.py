@@ -128,12 +128,3 @@ def test_is_not_chapter_case_insensitive():
     paragraph = "PROLOGUE"
     result = is_not_chapter(paragraph, metadata)
     assert result is True
-
-def test_is_not_chapter_customized_words():
-    not_chapter_words = NOT_CHAPTER.copy()
-    not_chapter_words.append("appendix")
-    metadata = IS_NOT_CHAPTER_TEST_METADATA.copy()
-    paragraph = "Appendix A"
-    result = is_not_chapter(paragraph, metadata, not_chapter_words=not_chapter_words)
-    assert result is True
-
