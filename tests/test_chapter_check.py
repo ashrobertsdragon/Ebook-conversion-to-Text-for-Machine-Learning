@@ -55,16 +55,14 @@ def test_word_to_num_two_digit():
     assert word_to_num("FORTYFIVE") == 45
 
 def test_word_to_num_two_words():
-    assert word_to_num("sixtynine") == 69
-    assert word_to_num("NINETYTWO") == 92
-
+    assert word_to_num("sixty nine") == 69
+    assert word_to_num("NINETY TWO") == 92
+def test_word_to_num_with_hyphen():
+    assert word_to_num("twenty-three") == 23
+    assert word_to_num("FOURTY-TWO") == 42
 def test_word_to_num_invalid_input():
     with pytest.raises(ValueError):
         word_to_num("onehundred")
-
-    with pytest.raises(ValueError):
-        word_to_num("twenty-three")
-
     with pytest.raises(ValueError):
         word_to_num("abc")
 

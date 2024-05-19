@@ -75,7 +75,11 @@ def word_to_num(number_string: str) -> int:
         number_string (str): A string representing the spelled-out number.
     Returns int: The integer value of the spelled-out number.
     """
-
+    if not isinstance(number_string, str):
+        raise TypeError("Must be a string")
+    if not number_string:
+        raise ValueError("Must have a value")
+    
     num_words = {
         "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
         "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10, "teen": 10,
