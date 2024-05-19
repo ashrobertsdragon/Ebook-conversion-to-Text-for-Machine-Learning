@@ -13,7 +13,7 @@ def roman_to_int(roman_num: str) -> int:
     """
     Convert a Roman numeral to an integer.
     Arguments:
-      roman (str): A string representing the Roman numeral.
+        roman_num (str): A string representing the Roman numeral.
     Returns int: The integer value of the Roman numeral.
     """
     if not isinstance(roman_num, str):
@@ -43,7 +43,7 @@ def roman_to_int(roman_num: str) -> int:
     for char in reversed(roman):
         if char not in ROMAN_NUMERALS:
             raise ValueError("Not roman numeral")
-  
+
         consecutive_count = consecutive_count + 1 if char == previous_char else 1
         if consecutive_count > 3:
             raise ValueError("Not roman numeral")
@@ -64,36 +64,37 @@ def roman_to_int(roman_num: str) -> int:
         prev_value = value
         previous_char = char
     if not total:
-      raise ValueError("Not roman numeral")
+        raise ValueError("Not roman numeral")
     return total
 
-def word_to_num(number_str: str) -> int:
+def word_to_num(number_string: str) -> int:
     """
     Convert a spelled-out number without spaces or hyphens to a string of the 
     integer. The function supports numbers from 0 to 99 and is case insensitive.
     Arguments:
-      number_str (str): A string representing the spelled-out number.
+        number_string (str): A string representing the spelled-out number.
     Returns int: The integer value of the spelled-out number.
     """
 
     num_words = {
-      "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4,
-      "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
-      "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13,
-      "fourteen": 14, "fifteen": 15, "sixteen": 16,
-      "seventeen": 17, "eighteen": 18, "nineteen": 19,
-      "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
-      "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90
+        "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+        "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10, "teen": 10,
+        "eleven": 11, "twelve": 12, "thirteen": 13,
+        "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
+        "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90
     }
-    number_str = number_str.lower().replace("-", "").replace(" ", "")
-    number_str = number_str.lower()
-    total = 0
-    temp_word = ""
-    for char in number_str:
-      temp_word += char
-      if temp_word in num_words:
-        total += num_words[temp_word]
-        temp_word = ""
+
+    string_number: str = number_string.lower().replace("-", "").replace(" ", "")
+    number_str: str = string_number.lower()
+    total: int = 0
+    temp_word: str = ""
+
+    for char in reversed(number_str):
+        temp_word = char + temp_word
+        if temp_word in num_words:
+            total += num_words[temp_word]
+            temp_word = ""
+    
     if temp_word:
         raise ValueError(f"Unknown number word: {temp_word}")
     return total
@@ -138,7 +139,7 @@ def is_chapter(s: str) -> bool:
     Check if a string contains the word "chapter", a Roman numeral, a 
     spelled-out number, or a digit.
     Arguments:
-      s (str): The string to check.
+        s (str): The string to check.
     Returns bool: True if the string meets the criteria, False otherwise.
     """
     lower_s = s.lower()
