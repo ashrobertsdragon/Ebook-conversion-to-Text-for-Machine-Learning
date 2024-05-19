@@ -146,7 +146,7 @@ def is_chapter(s: str) -> bool:
         s (str): The string to check.
     Returns bool: True if the string meets the criteria, False otherwise.
     """
-    lower_s = s.lower()
+    lower_s = s.lower().strip()
     return lower_s.startswith("chapter") or (len(lower_s.split()) == 1 and is_number(lower_s))
 
 def is_not_chapter(paragraph: str, metadata: dict) -> bool:
