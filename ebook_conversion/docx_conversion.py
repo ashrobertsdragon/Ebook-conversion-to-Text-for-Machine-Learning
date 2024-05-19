@@ -7,7 +7,6 @@ from docx import Document
 from docx.text.paragraph import Paragraph
 
 from .abtract_book import BookConversion
-from .chapter_check import is_chapter, is_not_chapter
 from .ocr import run_ocr
 
 class DocxConverter(BookConversion):
@@ -93,15 +92,6 @@ class DocxConverter(BookConversion):
         base64_images = self._extract_images(paragraph)
         ocr_text = run_ocr(base64_images)
         return ocr_text if ocr_text else paragraph.text.strip()
-
-    def _is_start_of_chapter(self, paragraph_text: str, index: int) -> bool:
-        MAX_LINES = 3
-        if index >= MAX_LINES:
-            return False
-        return (
-            is_chapter(paragraph_text)
-            or not is_not_chapter(paragraph_text, self.metadata)
-        )
 
     def _process_paragraph_text(self, paragraph_text: str, paragraph_index_of_chapter: int) -> Tuple[str, int]:
         """
