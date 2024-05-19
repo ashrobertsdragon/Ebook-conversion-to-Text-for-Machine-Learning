@@ -7,7 +7,6 @@ IS_NOT_CHAPTER_TEST_METADATA = {
     "title": "Test Book",
     "author": "John Doe"
 }
-
 def test_roman_to_int_valid():
     assert roman_to_int('III') == 3
     assert roman_to_int('IV') == 4
@@ -29,14 +28,16 @@ def test_roman_to_int_invalid_strings():
         roman_to_int('MMMM')
 
 def test_roman_to_int_invalid_types():
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         roman_to_int(123)
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         roman_to_int(['X', 'V']) 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         roman_to_int(None)
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         roman_to_int(12.34)
+
+
 
 def test_word_to_num_zero():
     assert word_to_num("zero") == 0
