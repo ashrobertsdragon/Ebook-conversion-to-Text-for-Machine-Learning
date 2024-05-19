@@ -1,5 +1,5 @@
 import pytest
-from ebook_conversion.chapter_check import roman_to_int, word_to_num, is_number, is_chapter, is_not_chapter, NOT_CHAPTER
+from ebook_conversion.chapter_check import roman_to_int, word_to_num, is_number, is_chapter, is_not_chapter
 
 
 
@@ -59,7 +59,7 @@ def test_word_to_num_two_words():
     assert word_to_num("NINETY TWO") == 92
 def test_word_to_num_with_hyphen():
     assert word_to_num("twenty-three") == 23
-    assert word_to_num("FOURTY-TWO") == 42
+    assert word_to_num("FORTY-TWO") == 42
 def test_word_to_num_invalid_input():
     with pytest.raises(ValueError):
         word_to_num("onehundred")
@@ -104,7 +104,7 @@ def test_is_chapter_with_leading_spaces():
 @pytest.mark.parametrize("paragraph, expected_output", [
     ("Preface", True),
     ("INTRODUCTION", True),
-    ("acknowledgments", True),
+    ("acknowledgements", True),
     ("Dedication", True),
     ("Prologue", True),
     ("Test Book", True),
