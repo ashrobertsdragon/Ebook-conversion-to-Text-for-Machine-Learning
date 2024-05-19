@@ -77,7 +77,7 @@ def word_to_num(number_string: str) -> int:
     """
     if not isinstance(number_string, str):
         raise TypeError("Must be a string")
-    if not number_string:
+    if len(number_string) == 0:
         raise ValueError("Must have a value")
     
     num_words = {
