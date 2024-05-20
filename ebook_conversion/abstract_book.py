@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 
-from .chapter_check import is_chapter, is_not_chapter
 from .text_conversion import desmarten_text
 
 
@@ -29,12 +28,3 @@ class BookConversion(ABC):
     
     def clean_text(self, text: str) -> str:
         return desmarten_text(text)
-    
-    def _is_start_of_chapter(self, text: str, index: int) -> bool:
-        
-        if index >= self.MAX_LINES_TO_CHECK:
-            return False
-        return (
-            is_chapter(text)
-            or not is_not_chapter(text, self.metadata)
-        )
