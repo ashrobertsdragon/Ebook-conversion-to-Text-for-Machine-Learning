@@ -10,6 +10,6 @@ folder/
 *.toml
 *.lock
 *.log
-
+.env
 .replit
 replit.nix

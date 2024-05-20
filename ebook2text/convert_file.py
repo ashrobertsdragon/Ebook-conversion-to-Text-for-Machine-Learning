@@ -6,10 +6,7 @@ from .epub_conversion import read_epub
 from .pdf_conversion import read_pdf
 from .text_conversion import parse_text_file
 from .file_handling import read_text_file, write_to_file
-from .logging_config import start_loggers
 
-start_loggers()
-error_logger = logging.getLogger("error_logger")
 
 def convert_file(file_path: str, metadata: dict) -> None:
   """
@@ -42,7 +39,7 @@ def convert_file(file_path: str, metadata: dict) -> None:
     book_content = read_text_file(file_path)
     book_content = parse_text_file(book_content)
   else:
-    error_logger.error("Invalid file type")
+    logging.error(f"Invalid file type {extension} for file {file_path}")
 
   book_name = f"{base_name}.txt"
   book_path = os.path.join(folder, book_name)
