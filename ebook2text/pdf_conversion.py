@@ -267,7 +267,7 @@ class PDFConverter(BookConversion):
                 paragraph.append(line)
         return "\n".join(paragraph) or ""
 
-    def _page_ends_with_punctuaation(self, text: str) -> bool:
+    def _page_ends_with_punctuation(self, text: str) -> bool:
         """Checks if text ends with sentence punctuation"""
         SENTENCE_PUNCTUATION: set = {'.', '!', '?', '."', '!"', '?"'}
         return any(text.rstrip().endswith(p) for p in SENTENCE_PUNCTUATION)
