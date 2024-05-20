@@ -6,7 +6,8 @@ import docx
 from docx import Document
 from docx.text.paragraph import Paragraph
 
-from .abtract_book import BookConversion
+from .abstract_book import BookConversion
+from .chapter_check import is_chapter, is_not_chapter
 from .ocr import run_ocr
 
 class DocxConverter(BookConversion):
@@ -93,7 +94,16 @@ class DocxConverter(BookConversion):
         ocr_text = run_ocr(base64_images)
         return ocr_text if ocr_text else paragraph.text.strip()
 
-    def _process_paragraph_text(self, paragraph_text: str, paragraph_index_of_chapter: int) -> Tuple[str, int]:
+    def _is_start_of_chapter(self, text: str, index: int) -> bool:
+        
+        if index >= self.MAX_LINES_TO_CHECK:
+            return False
+        return (
+            is_chapter(text)
+            or not is_not_chapter(text, self.metadata)
+        )
+    
+    def _process_text(self, paragraph_text: str, paragraph_index_of_chapter: int) -> Tuple[str, int]:
         """
         Process a paragraph's text to determine if it starts a new chapter and
         format it accordingly.
@@ -136,7 +146,7 @@ class DocxConverter(BookConversion):
                 paragraph_index_of_chapter = 0
 
             elif paragraph_text:
-                processed_text, paragraph_index_of_chapter = self._process_paragraph_text(paragraph_text, paragraph_index_of_chapter)
+                processed_text, paragraph_index_of_chapter = self._process_text(paragraph_text, paragraph_index_of_chapter)
                 current_page.append(processed_text)
 
         if current_page:
