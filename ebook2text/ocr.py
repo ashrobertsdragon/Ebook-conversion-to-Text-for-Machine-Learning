@@ -39,6 +39,8 @@ def create_payload(base64_images: list) -> list:
             }, *image_role_list]
         }]
 
+def clean_response(answer: str) -> str:
+    return "" if answer == "No text found" or answer.startswith("I'm sorry, but as an") else answer
 def run_ocr(base64_images: list) -> str:
     """
     Perform optical character recognition (OCR) on a list of base64-encoded 
@@ -61,7 +63,7 @@ def run_ocr(base64_images: list) -> str:
         )
         if response.choices:
             answer = response.choices[0].message.content
-            return answer
+            return clean_response(answer)
     except Exception as e:
         logging.exception("An error occured %s", str(e))
         return ""
