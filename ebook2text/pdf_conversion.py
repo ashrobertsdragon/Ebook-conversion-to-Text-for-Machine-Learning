@@ -202,10 +202,28 @@ class PDFConverter(BookConversion):
             if obj_tuple[0] == "image":
                 obj_nums.append(obj_tuple[1])
             elif obj_tuple[0] == "text":
-                pdf_text_list.append(obj_tuple[1] + "\n" if obj_tuple[1] != "No text found" else "")
+                pdf_text_list.append(obj_tuple[1])
         ocr_text = self._extract_text_from_image(obj_nums)
-        return ocr_text + "\n" + "".join(pdf_text_list) if ocr_text is not None else "".join(pdf_text_list)
+        return self._join_paragraph(pdf_text_list) if (ocr_text is None or ocr_text == "") else ocr_text + "\n" + self._join_paragraph(pdf_text_list)
 
+    def _join_paragraph(self, paragraph: list) -> str:
+        """
+        Joins the list of paragraph lines processed by the '_process_paragraph'
+        method based on whether the line ends in a punctuation mark or not.
+
+        Args:
+            paragraph (list): A list of individual lines from a paragraph
+                from a PDF file.
+        Returns:
+            A string of the joined lines of the paragraph.
+            
+        Note: The assumption is that if a line ends with a punctuation mark,
+        it is also the end of the paragraph.
+        """
+        return "".join(
+            line + "\n" if self._ends_with_punctuation(line) else line + ""
+            for line in paragraph
+        )
     def _process_text(self, page_text) -> str:
         """
         Parses the given pdf page and returns it as a string.
@@ -267,7 +285,7 @@ class PDFConverter(BookConversion):
                 paragraph.append(line)
         return "\n".join(paragraph) or ""
 
-    def _page_ends_with_punctuation(self, text: str) -> bool:
+    def _ends_with_punctuation(self, text: str) -> bool:
         """Checks if text ends with sentence punctuation"""
         SENTENCE_PUNCTUATION: set = {'.', '!', '?', '."', '!"', '?"'}
         return any(text.rstrip().endswith(p) for p in SENTENCE_PUNCTUATION)
@@ -299,7 +317,7 @@ class PDFConverter(BookConversion):
                 pdf_page: str = self._process_text(page_text)
                 if pdf_page:
                     text_parts.append(
-                        pdf_page if self._page_ends_with_punctuation(pdf_page)
+                        pdf_page if self._ends_with_punctuation(pdf_page)
                         else "\n" + pdf_page
                     )
             except Exception as e:
