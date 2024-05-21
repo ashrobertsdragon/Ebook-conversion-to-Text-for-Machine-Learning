@@ -299,7 +299,7 @@ class PDFConverter(BookConversion):
                 pdf_page: str = self._process_text(page_text)
                 if pdf_page:
                     text_parts.append(
-                        pdf_page if self._ends_with_punctuation(pdf_page)
+                        pdf_page if self._page_ends_with_punctuation(pdf_page)
                         else "\n" + pdf_page
                     )
             except Exception as e:
