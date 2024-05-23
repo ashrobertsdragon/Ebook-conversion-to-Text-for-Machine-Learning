@@ -25,4 +25,13 @@ setup(
     author="Ashlynn Antrobus",
     author_email="ashlynn@prosepal.io",
     packages=find_packages(),
+    install_requires=[
+        "pdfminer.six",
+        "pillow",
+        "EbookLib",
+        "beautifulsoup4",
+        "python-docx",
+        "python-dotenv",
+        "openai",
+    ],
 )
