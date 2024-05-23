@@ -5,11 +5,11 @@ __pycache__/
 .local/
 .venv/
 .vscode/
+.pytest_cache/
+.ruff_cache/
 folder/
 
-*.toml
+*.egg-info
 *.lock
 *.log
 .env
-.replit
-replit.nix
