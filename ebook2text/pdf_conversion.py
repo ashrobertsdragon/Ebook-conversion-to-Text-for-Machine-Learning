@@ -1,14 +1,14 @@
 import base64
 import logging
 from io import BytesIO
-from typing import Any, Tuple, Union, Optional
+from typing import Any, Optional, Tuple, Union
 
-from pdfminer.pdfparser import PDFParser
+from pdfminer.high_level import extract_pages
+from pdfminer.layout import LTChar, LTContainer, LTPage, LTText
 from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdfinterp import resolve1
+from pdfminer.pdfparser import PDFParser
 from pdfminer.pdftypes import PDFStream
-from pdfminer.layout import LTChar, LTContainer, LTText, LTPage
-from pdfminer.high_level import extract_pages
 from PIL import Image
 
 from .abstract_book import BookConversion
@@ -43,35 +43,41 @@ class PDFConverter(BookConversion):
         Exception: If there is an error in processing image data or text
             extraction.
     """
+
     def _read_file(self, file_path: str) -> list:
         """Read the PDF file using PDFMiner.Six extract_pages function"""
         return extract_pages(file_path)
-    
-    def _create_image_from_binary(self, stream: bytes, width: int, height: int) -> str:
+
+    def _create_image_from_binary(
+        self, stream: bytes, width: int, height: int
+    ) -> str:
         """
         Convert binary image data into a base64-encoded JPEG string.
 
         This function takes binary data of an image, along with its width and
-        height, and converts it into a base64-encoded JPEG format string.
+            height, and converts it into a base64-encoded JPEG format string.
 
         Args:
             stream (bytes): The binary data of the image.
             width (int): The width of the image in pixels.
             height (int): The height of the image in pixels.
 
-        Returns str: A base64-encoded string representing the JPEG image.
+        Returns
+            str: A base64-encoded string representing the JPEG image.
 
         Raises:
             Exception: If there is an error in processing the image data.
         """
         try:
-            image: Image = Image.frombytes('1', (width, height), stream)
-            image = image.convert('L')
+            image: Image = Image.frombytes("1", (width, height), stream)
+            image = image.convert("L")
             buffered: BytesIO = BytesIO()
             image.save(buffered, format="JPEG")
-            return base64.b64encode(buffered.getvalue()).decode('utf-8')
+            return base64.b64encode(buffered.getvalue()).decode("utf-8")
         except Exception as e:
-            logging.exception(f"failed to create base64 encoded image due to {e}")
+            logging.exception(
+                "failed to create base64 encoded image due to %s", str(e)
+            )
 
     def _get_image(self, obj_num: int, attempt: Optional[int] = 0) -> str:
         """
@@ -111,8 +117,7 @@ class PDFConverter(BookConversion):
         except Exception as e:
             logging.info(f"Issue: {e} with object: {obj_num}")
             return self._get_image(obj_num + 1, attempt + 1)
-        
-    
+
     def _extract_images(self, obj_nums: list) -> list:
         """
         Processes and extracts images from PDF objects based on the provided
@@ -134,35 +139,39 @@ class PDFConverter(BookConversion):
             list: A list of base64-encoded strings representing the extracted
                 images.
         """
-        with open(self.file_path, 'rb') as f:
+        with open(self.file_path, "rb") as f:
             parser: PDFParser = PDFParser(f)
             self.document: PDFDocument = PDFDocument(parser)
             base64_images: list = []
             for obj_num in obj_nums:
-                image: str = self._get_image(obj_num, attempt = 0)
+                image: str = self._get_image(obj_num, attempt=0)
                 base64_images.append(image) if image else None
         return base64_images
-    
+
     def _extract_text_from_image(self, obj_nums: list) -> str:
         """Collect list of Base64 encoded images and run them through OCR"""
         base64_images: list = self._extract_images(obj_nums)
         return run_ocr(base64_images)
-        
+
     def _process_element(self, element: Any) -> Tuple[str, Union[Any, None]]:
         """
-        Processes a PDF layout element to identify its type and extract relevant
-        data.
+        Processes a PDF layout element to identify its type and extract
+        relevant data.
 
-        This function categorizes a given PDF layout element into types such as
-        image, text, or other. For image elements, it returns the object ID. For
-        text elements, it returns the extracted text. The function handles
-        container elements by recursively processing their children. If an element
-        does not match any specific type, it is categorized as "other".
+        This function categorizes a given PDF layout element into types such
+        as image, text, or other. For image elements, it returns the object
+        ID. For text elements, it returns the extracted text. The function
+        handles container elements by recursively processing their children.
+        If an element does not match any specific type, it is categorized as
+        "other".
 
         Args:
             element (Any): A PDF layout element from pdfminer.
 
-            Returns: A tuple containing the element type and its relevant data (object ID for images or text content for text elements), or None for other types.
+        Returns:
+            A tuple containing the element type and its relevant data (object
+                ID for images or text content for text elements), or None for
+                other types.
         """
         if hasattr(element, "stream"):
             return ("image", element.stream.objid)
@@ -183,7 +192,7 @@ class PDFConverter(BookConversion):
         the object numbers of images and text content. For text elements, it
         appends the extracted text to a list after checking for the presence
         of actual text. If the element is an image, it adds the object number
-        to a separate list. After processing all elements, it calls the 
+        to a separate list. After processing all elements, it calls the
         '_extract_text_from_image' method to extract text from images using
         OCR. Finally, it combines the OCR text with the extracted text content
         from the page and returns the concatenated result as a single string.
@@ -204,7 +213,11 @@ class PDFConverter(BookConversion):
             elif obj_tuple[0] == "text":
                 pdf_text_list.append(obj_tuple[1])
         ocr_text = self._extract_text_from_image(obj_nums)
-        return self._join_paragraph(pdf_text_list) if (ocr_text is None or ocr_text == "") else ocr_text + "\n" + self._join_paragraph(pdf_text_list)
+        return (
+            self._join_paragraph(pdf_text_list)
+            if (ocr_text is None or ocr_text == "")
+            else ocr_text + "\n" + self._join_paragraph(pdf_text_list)
+        )
 
     def _join_paragraph(self, paragraph: list) -> str:
         """
@@ -216,7 +229,7 @@ class PDFConverter(BookConversion):
                 from a PDF file.
         Returns:
             A string of the joined lines of the paragraph.
-            
+
         Note: The assumption is that if a line ends with a punctuation mark,
         it is also the end of the paragraph.
         """
@@ -224,6 +237,7 @@ class PDFConverter(BookConversion):
             line + "\n" if self._ends_with_punctuation(line) else line + ""
             for line in paragraph
         )
+
     def _process_text(self, page_text) -> str:
         """
         Parses the given pdf page and returns it as a string.
@@ -252,7 +266,7 @@ class PDFConverter(BookConversion):
                 pages.append(paragraph)
 
         return "\n".join(pages)
-    
+
     def _process_paragraph(self, paragraph_lines: list) -> str:
         """
         Processes a list of paragraph lines to filter out chapter boundaries
@@ -287,7 +301,7 @@ class PDFConverter(BookConversion):
 
     def _ends_with_punctuation(self, text: str) -> bool:
         """Checks if text ends with sentence punctuation"""
-        SENTENCE_PUNCTUATION: set = {'.', '!', '?', '."', '!"', '?"'}
+        SENTENCE_PUNCTUATION: set = {".", "!", "?", '."', '!"', '?"'}
         return any(text.rstrip().endswith(p) for p in SENTENCE_PUNCTUATION)
 
     def split_chapters(self) -> str:
@@ -317,7 +331,8 @@ class PDFConverter(BookConversion):
                 pdf_page: str = self._process_text(page_text)
                 if pdf_page:
                     text_parts.append(
-                        pdf_page if self._ends_with_punctuation(pdf_page)
+                        pdf_page
+                        if self._ends_with_punctuation(pdf_page)
                         else "\n" + pdf_page
                     )
             except Exception as e:
@@ -325,8 +340,8 @@ class PDFConverter(BookConversion):
                     f"Error occurred during text extraction or processing: {e}"
                 )
         return "".join(text_parts)
-        
-        
+
+
 def read_pdf(file_path: str, metadata: dict) -> str:
     """
     Reads a PDF file and splits its content into chapters based on chapter

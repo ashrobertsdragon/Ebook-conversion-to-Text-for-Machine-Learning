@@ -10,6 +10,7 @@ from .abstract_book import BookConversion
 from .chapter_check import is_chapter, is_not_chapter
 from .ocr import run_ocr
 
+
 class DocxConverter(BookConversion):
     """
     Class to convert a Word document to structured text, extract images,
@@ -30,6 +31,7 @@ class DocxConverter(BookConversion):
         clean_text: Cleans smart punctuation from the text.
         split_chapters: Splits the paragraphs into chapters.
     """
+
     def __init__(self, file_path: str, metadata: dict):
         super().__init__(file_path, metadata)
         self.paragraphs = self.extract_paragraphs()
@@ -49,7 +51,10 @@ class DocxConverter(BookConversion):
             bool: True if the paragraph contains a page break, False otherwise
         """
         for run in paragraph.runs:
-            if "<w:lastRenderedPageBreak/>" in run.element.xml or "<w:br " in run.element.xml:
+            if (
+                "<w:lastRenderedPageBreak/>" in run.element.xml
+                or "<w:br " in run.element.xml
+            ):
                 return True
         return False
 
@@ -67,21 +72,18 @@ class DocxConverter(BookConversion):
                 extracted from the paragraph.
         """
         base64_images: list = []
-        
+        SCHEMA = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
         for run in paragraph.runs:
             for inline_shape in run.element.findall(
-                ".//a:blip",
-                namespaces=docx.oxml.ns.nsmap
+                ".//a:blip", namespaces=docx.oxml.ns.nsmap
             ):
-                image_blip = inline_shape.get(
-                    '{http://schemas.openxmlformats.org/drawingml/2006/main}embed'
-                )
+                image_blip = inline_shape.get(f'"{SCHEMA}embed"')
                 image_part = self.doc.part.related_parts[image_blip]
                 stream = BytesIO(image_part.blob)
-                base64_images.append(
-                    base64.b64encode(stream.read()).decode("utf-8")
-                )
-        
+                read_strm = stream.read()
+                base64_encoding = base64.b64encode(read_strm).decode("utf-8")
+                base64_images.append(base64_encoding)
+
         return base64_images
 
     def extract_text(self, paragraph: Paragraph) -> str:
@@ -95,72 +97,70 @@ class DocxConverter(BookConversion):
         return ocr_text if ocr_text else paragraph.text.strip()
 
     def _is_start_of_chapter(self, text: str, index: int) -> bool:
-        
         if index >= self.MAX_LINES_TO_CHECK:
             return False
-        return (
-            is_chapter(text)
-            or not is_not_chapter(text, self.metadata)
-        )
-    
-    def _process_text(self, paragraph_text: str, paragraph_index_of_chapter: int) -> Tuple[str, int]:
+        return is_chapter(text) or not is_not_chapter(text, self.metadata)
+
+    def _process_text(
+        self, paragraph_text: str, paragraph_chapter_index: int
+    ) -> Tuple[str, int]:
         """
         Process a paragraph's text to determine if it starts a new chapter and
         format it accordingly.
 
         Args:
             paragraph_text (str): The text of the paragraph to be processed.
-            paragraph_index_of_chapter (int): The index of the paragraph
+            paragraph_chapter_index (int): The index of the paragraph
                 within the current chapter.
 
         Returns:
             Tuple[str, int]: A tuple containing the processed text and the
                 updated index of the paragraph within its chapter.
         """
-        if self._is_start_of_chapter(
-            paragraph_text,
-            paragraph_index_of_chapter
-        ):
-            paragraph_index_of_chapter = 0
+        if self._is_start_of_chapter(paragraph_text, paragraph_chapter_index):
+            paragraph_chapter_index = 0
             processed_text = (
-                "***" if self.pages
-                else self.clean_text(paragraph_text)
+                "***" if self.pages else self.clean_text(paragraph_text)
             )
         else:
             processed_text = paragraph_text
-        return processed_text, paragraph_index_of_chapter
-    
+        return processed_text, paragraph_chapter_index
+
     def split_chapters(self) -> str:
         """Splits the paragraph list into chapters."""
         self.pages: list = []
         current_page: list = []
-        paragraph_index_of_chapter: int = 0
+        paragraph_chapter_index: int = 0
 
         for paragraph in self.paragraphs:
             paragraph_text = self.extract_text(paragraph)
-            paragraph_index_of_chapter += 1
+            paragraph_chapter_index += 1
 
             if self._contains_page_break(paragraph):
                 self.pages.append("\n".join(current_page))
                 current_page = []
-                paragraph_index_of_chapter = 0
+                paragraph_chapter_index = 0
 
             elif paragraph_text:
-                processed_text, paragraph_index_of_chapter = self._process_text(paragraph_text, paragraph_index_of_chapter)
+                (processed_text, paragraph_chapter_index) = self._process_text(
+                    paragraph_text, paragraph_chapter_index
+                )
                 current_page.append(processed_text)
 
         if current_page:
             self.pages.append("\n".join(current_page))
         return "\n".join(self.pages)
-    
+
+
 def read_docx(file_path: str, metadata: dict) -> str:
     """
-    Reads the contents of a DOCX file, preprocesses it, and returns it as a string.
-    
+    Reads the contents of a DOCX file, preprocesses it, and returns it as a
+    string.
+
     Args:
         file_path (str): The path to the DOCX file.
         metadata (dict): Metadata about the document.
-        
+
     Returns:
         str: The processed text of the DOCX file formatted into chapters.
     """

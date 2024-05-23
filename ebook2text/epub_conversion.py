@@ -1,10 +1,10 @@
 import ebooklib
+from bs4 import BeautifulSoup
 from ebooklib import epub
 from ebooklib.epub import EpubBook
-from bs4 import BeautifulSoup
 
 from .abstract_book import BookConversion
-from .chapter_check import is_chapter, is_not_chapter, NOT_CHAPTER
+from .chapter_check import NOT_CHAPTER, is_chapter, is_not_chapter
 from .ocr import encode_image, run_ocr
 
 
@@ -31,6 +31,7 @@ class EpubConversion(BookConversion):
         split_chapters: Split the EPUB file into chapters and return the
             cleaned text.
     """
+
     def _read_file(self, file_path: str) -> EpubBook:
         """Reads Epub file using Ebooklib package"""
         return epub.read_epub(file_path, options={"ignore_ncx": True})
@@ -64,11 +65,11 @@ class EpubConversion(BookConversion):
         """
         image_data = self.book.read_item(element["src"])
         return [encode_image(image_data)]
-    
+
     def _process_chapter_text(self, item) -> str:
         """
         Extracts text from a chapter item.
-        
+
             Args:
                 item: ebooklib item representing a chapter.
             Returns string containing the text of the chapter.
@@ -77,19 +78,19 @@ class EpubConversion(BookConversion):
         soup = BeautifulSoup(item.content, "html.parser")
         elements = soup.find_all(TEXT_ELEMENTS)
 
-        for i, element in enumerate(elements[:self.MAX_LINES_TO_CHECK]):
+        for i, element in enumerate(elements[: self.MAX_LINES_TO_CHECK]):
             text = self.extract_text(element)
             if any(word in NOT_CHAPTER for word in text.split()):
                 return ""
             elif is_chapter(text):
                 starting_line = i + 1
-                return ("\n".join(
+                return "\n".join(
                     tag.get_text().strip()
                     for tag in elements[starting_line:]
                     if tag != "img"
-                ))
+                )
         return ""
-        
+
     def split_chapters(self) -> str:
         """
         Split the EPUB file into chapters and return the cleaned text.
