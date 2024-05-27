@@ -91,7 +91,7 @@ class EpubConversion(BookConversion):
                 )
         return ""
 
-    def split_chapters(self) -> str:
+    def _split_book(self) -> str:
         """
         Split the EPUB file into chapters and return the cleaned text.
 
@@ -107,7 +107,7 @@ class EpubConversion(BookConversion):
                 chapter_text = self._process_chapter_text(item)
                 if chapter_text:
                     chapter.append(self.clean_text(chapter_text))
-        return "\n***\n".join(chapter)
+        self._parsed_book = "\n***\n".join(chapter)
 
 
 def read_epub(file_path: str, metadata: dict) -> str:

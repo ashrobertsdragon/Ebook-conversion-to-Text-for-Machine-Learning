@@ -1,4 +1,5 @@
 import base64
+import logging
 from typing import Tuple
 
 import docx
@@ -8,6 +9,7 @@ from docx.text.paragraph import Paragraph
 from .abstract_book import BookConversion
 from .chapter_check import is_chapter, is_not_chapter
 from .namespaces import docx_ns_map
+from .ocr import run_ocr
 
 
 class DocxConverter(BookConversion):
@@ -32,9 +34,18 @@ class DocxConverter(BookConversion):
     """
 
     def __init__(self, file_path: str, metadata: dict):
+        """
+        Calls the __init__ method of the parent BookConversion class which
+        calls assigns the return of the _read_file method to self.book. Then
+        extracts the paragraph objects from the book and puts them in the
+        paragraphs list before initializing the non_chapter flag and
+        pages_list
+        """
         super().__init__(file_path, metadata)
         self.paragraphs: list = self.extract_paragraphs()
+
         self.non_chapter: bool = False
+        self.pages_list: list = []
 
     def _read_file(self, file_path: str) -> Document:
         """
@@ -60,10 +71,11 @@ class DocxConverter(BookConversion):
         Returns:
             bool: True if the paragraph contains a page break, False otherwise
         """
-        PAGE_BREAK_TAGS = ["<w:pageBreakBefore/>", "<w:br "]
-
-        for run in paragraph.runs:
-            if any(tag in run.element.xml for tag in PAGE_BREAK_TAGS):
+        p_element = paragraph._element
+        if p_element.pPr is not None:
+            if p_element.pPr.pageBreakBefore is not None:
+                # Explicit check required by python-dox library to avoid
+                # FutureWarning warning
                 return True
         return False
 
@@ -99,13 +111,14 @@ class DocxConverter(BookConversion):
         namespace: dict = docx_ns_map
         image_blobs: list = []
 
-        for run in paragraph.runs:
-            blips = run.element.findall(".//a:blip", namespaces=namespace)
-            for blip in blips:
+        blips = paragraph._element.findall(".//a:blip", namespaces=namespace)
+        for blip in blips:
+            try:
                 rId = blip.attrib[f"{{{namespace['r']}}}embed"]
                 image_part = paragraph.part.related_parts[rId]
                 image_blobs.append(image_part.blob)
-
+            except Exception as e:
+                logging.exception("Could not extract images %s", str(e))
         return image_blobs
 
     def _build_base64_images_list(self, image_blobs: list) -> list:
@@ -134,8 +147,7 @@ class DocxConverter(BookConversion):
         ocr_text: str = ""
         base64_images: list = self._extract_images(paragraph)
         if base64_images:
-            # ocr_text = run_ocr(base64_images)
-            pass
+            ocr_text = run_ocr(base64_images)
         paragraph_text: str = paragraph.text.strip()
         return ocr_text if ocr_text else paragraph_text
 
@@ -205,7 +217,7 @@ class DocxConverter(BookConversion):
 
         if self._is_start_of_chapter(paragraph_text, current_para_index):
             current_para_index = 0
-            processed_text = CHAPTER_SEPARATOR if self.pages else ""
+            processed_text = CHAPTER_SEPARATOR if self.pages_list else ""
             self.non_chapter = False
         elif self._is_non_chapter(paragraph_text, current_para_index):
             processed_text = ""
@@ -216,16 +228,34 @@ class DocxConverter(BookConversion):
             processed_text = self.clean_text(paragraph_text)
         return processed_text, current_para_index
 
-    def _add_page(self, current_page: list) -> str:
-        non_empty_page = [page for page in filter(None, current_page)]
-        if non_empty_page:
-            self.pages.append("\n".join(non_empty_page))
+    def _add_page(self, current_page: list) -> None:
+        """
+        Adds the current page content to the `self.pages` list after filtering
+        out empty pages.
 
-    def split_chapters(self) -> str:
-        """Splits the paragraph list into chapters."""
-        self.pages: list = []
+        Args:
+            current_page (list): The list of content for the current page.
+
+        Effects:
+            Modifies the `self.pages` list by appending the non-empty page
+            content.
+        """
+        filtered_page = list(filter(None, current_page))
+        if filtered_page:
+            self.pages_list.extend(filtered_page)
+
+    def _split_book(self) -> str:
+        """
+        Process paragraphs to organize them into pages and chapters, handling
+        page breaks and chapter starts, and compile the final structured text
+        of the book.
+
+        Returns:
+            str: The structured text of the entire book.
+        """
         current_page: list = []
         current_para_index: int = 0
+
         for paragraph in self.paragraphs:
             paragraph_text = self.extract_text(paragraph)
             current_para_index += 1
@@ -235,7 +265,7 @@ class DocxConverter(BookConversion):
                 current_page = []
                 current_para_index = 0
 
-            elif paragraph_text:
+            if paragraph_text:
                 (processed_text, current_para_index) = self._process_text(
                     paragraph_text, current_para_index
                 )
@@ -243,7 +273,7 @@ class DocxConverter(BookConversion):
 
         if current_page:
             self._add_page(current_page)
-        return "\n".join(self.pages)
+        self._parsed_book = "\n".join(self.pages_list)
 
 
 def read_docx(file_path: str, metadata: dict) -> str:

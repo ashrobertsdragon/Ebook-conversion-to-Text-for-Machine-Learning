@@ -304,7 +304,7 @@ class PDFConverter(BookConversion):
         SENTENCE_PUNCTUATION: set = {".", "!", "?", '."', '!"', '?"'}
         return any(text.rstrip().endswith(p) for p in SENTENCE_PUNCTUATION)
 
-    def split_chapters(self) -> str:
+    def _split_book(self) -> str:
         """
         Splits the PDF content into chapters based on chapter boundaries.
 
@@ -326,20 +326,15 @@ class PDFConverter(BookConversion):
         """
         text_parts = []
         for page in self.book:
-            try:
-                page_text: str = self.extract_text(page)
-                pdf_page: str = self._process_text(page_text)
-                if pdf_page:
-                    text_parts.append(
-                        pdf_page
-                        if self._ends_with_punctuation(pdf_page)
-                        else "\n" + pdf_page
-                    )
-            except Exception as e:
-                logging.exception(
-                    f"Error occurred during text extraction or processing: {e}"
+            page_text: str = self.extract_text(page)
+            pdf_page: str = self._process_text(page_text)
+            if pdf_page:
+                text_parts.append(
+                    pdf_page
+                    if self._ends_with_punctuation(pdf_page)
+                    else "\n" + pdf_page
                 )
-        return "".join(text_parts)
+        self._parsed_book = "".join(text_parts)
 
 
 def read_pdf(file_path: str, metadata: dict) -> str:
