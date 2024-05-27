@@ -1,5 +1,4 @@
 import base64
-from io import BytesIO
 from typing import Tuple
 
 import docx
@@ -8,7 +7,7 @@ from docx.text.paragraph import Paragraph
 
 from .abstract_book import BookConversion
 from .chapter_check import is_chapter, is_not_chapter
-from .ocr import run_ocr
+from .namespaces import docx_ns_map
 
 
 class DocxConverter(BookConversion):
@@ -38,9 +37,19 @@ class DocxConverter(BookConversion):
         self.non_chapter: bool = False
 
     def _read_file(self, file_path: str) -> Document:
+        """
+        Reads a Word document from the specified file path and returns a
+        Document object representing the parsed content.
+        """
         return docx.Document(file_path)
 
     def extract_paragraphs(self) -> list:
+        """
+        Extracts paragraphs from the Word document.
+
+        Returns:
+            list: A list of paragraph objects extracted from the document.
+        """
         return self.book.paragraphs
 
     def _contains_page_break(self, paragraph: Paragraph) -> bool:
@@ -51,12 +60,10 @@ class DocxConverter(BookConversion):
         Returns:
             bool: True if the paragraph contains a page break, False otherwise
         """
+        PAGE_BREAK_TAGS = ["<w:pageBreakBefore/>", "<w:br "]
+
         for run in paragraph.runs:
-            if (
-                "<w:lastRenderedPageBreak/>" in run.element.xml
-                or "<w:pageBreakBefore/>" in run.element.xml
-                or "<w:br " in run.element.xml
-            ):
+            if any(tag in run.element.xml for tag in PAGE_BREAK_TAGS):
                 return True
         return False
 
@@ -73,20 +80,49 @@ class DocxConverter(BookConversion):
             list: A list of base64-encoded strings, each representing an image
                 extracted from the paragraph.
         """
-        SCHEMA_STUB = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
-        SCHEMA = f"'{SCHEMA_STUB}embed'"
-        base64_images: list = []
-        for run in paragraph.runs:
-            for inline_shape in run.element.findall(
-                ".//a:blip", namespaces=docx.oxml.ns.nsmap
-            ):
-                image_blip = inline_shape.get(SCHEMA)
-                image_part = self.book.part.related_parts[image_blip]
-                stream = BytesIO(image_part.blob)
-                read_strm = stream.read()
-                base64_encoding = base64.b64encode(read_strm).decode("utf-8")
-                base64_images.append(base64_encoding)
+        image_blobs: list = self._extract_image_blobs(paragraph)
+        base64_images: list = self._build_base64_images_list(image_blobs)
+        return base64_images
 
+    def _extract_image_blobs(self, paragraph: Paragraph) -> list:
+        """
+        Extracts image blobs from a paragraph in a Word document and returns a
+        list of these blobs.
+
+        Args:
+            paragraph (Paragraph): The paragraph object from a Word document
+                containing runs with potential images.
+
+        Returns:
+            list: A list of image blobs extracted from the paragraph.
+        """
+        namespace: dict = docx_ns_map
+        image_blobs: list = []
+
+        for run in paragraph.runs:
+            blips = run.element.findall(".//a:blip", namespaces=namespace)
+            for blip in blips:
+                rId = blip.attrib[f"{{{namespace['r']}}}embed"]
+                image_part = paragraph.part.related_parts[rId]
+                image_blobs.append(image_part.blob)
+
+        return image_blobs
+
+    def _build_base64_images_list(self, image_blobs: list) -> list:
+        """
+        Extracts and converts images found in a Word document's paragraph into
+        base64-encoded strings.
+
+        Args:
+            image_blobs (list): A list of image blobs extracted from the
+                paragraph.
+
+        Returns:
+            list: A list of base64-encoded strings representing the images.
+        """
+        base64_images = [
+            base64.b64encode(image).decode("utf-8") for image in image_blobs
+        ]
         return base64_images
 
     def extract_text(self, paragraph: Paragraph) -> str:
@@ -98,7 +134,8 @@ class DocxConverter(BookConversion):
         ocr_text: str = ""
         base64_images: list = self._extract_images(paragraph)
         if base64_images:
-            ocr_text = run_ocr(base64_images)
+            # ocr_text = run_ocr(base64_images)
+            pass
         paragraph_text: str = paragraph.text.strip()
         return ocr_text if ocr_text else paragraph_text
 
@@ -149,7 +186,7 @@ class DocxConverter(BookConversion):
         return is_not_chapter(text, self.metadata)
 
     def _process_text(
-        self, paragraph_text: str, current_chapter_index: int
+        self, paragraph_text: str, current_para_index: int
     ) -> Tuple[str, int]:
         """
         Process a paragraph's text to determine if it starts a new chapter and
@@ -157,7 +194,7 @@ class DocxConverter(BookConversion):
 
         Args:
             paragraph_text (str): The text of the paragraph to be processed.
-            current_chapter_index (int): The index of the paragraph
+            current_para_index (int): The index of the paragraph
                 within the current chapter.
 
         Returns:
@@ -165,47 +202,47 @@ class DocxConverter(BookConversion):
                 updated index of the paragraph within its chapter.
         """
         CHAPTER_SEPARATOR = "***"
-        current_chapter_index += 1
 
-        if self._is_non_chapter(paragraph_text, current_chapter_index):
-            processed_text = ""
-            self.non_chapter = True
-        elif self._is_start_of_chapter(paragraph_text, current_chapter_index):
-            current_chapter_index = 0
+        if self._is_start_of_chapter(paragraph_text, current_para_index):
+            current_para_index = 0
             processed_text = CHAPTER_SEPARATOR if self.pages else ""
             self.non_chapter = False
+        elif self._is_non_chapter(paragraph_text, current_para_index):
+            processed_text = ""
+            self.non_chapter = True
         elif self.non_chapter:
             processed_text = ""
         else:
             processed_text = self.clean_text(paragraph_text)
+        return processed_text, current_para_index
 
-        return processed_text, current_chapter_index
+    def _add_page(self, current_page: list) -> str:
+        non_empty_page = [page for page in filter(None, current_page)]
+        if non_empty_page:
+            self.pages.append("\n".join(non_empty_page))
 
     def split_chapters(self) -> str:
         """Splits the paragraph list into chapters."""
         self.pages: list = []
         current_page: list = []
-        paragraph_chapter_index: int = 0
-
-        for i, paragraph in enumerate(self.paragraphs):
-            if i > 20:
-                break
+        current_para_index: int = 0
+        for paragraph in self.paragraphs:
             paragraph_text = self.extract_text(paragraph)
-            paragraph_chapter_index += 1
+            current_para_index += 1
 
             if self._contains_page_break(paragraph):
-                self.pages.append("\n".join(current_page))
+                self._add_page(current_page)
                 current_page = []
-                paragraph_chapter_index = 0
+                current_para_index = 0
 
             elif paragraph_text:
-                (processed_text, paragraph_chapter_index) = self._process_text(
-                    paragraph_text, paragraph_chapter_index
+                (processed_text, current_para_index) = self._process_text(
+                    paragraph_text, current_para_index
                 )
                 current_page.append(processed_text)
 
         if current_page:
-            self.pages.append("\n".join(current_page))
+            self._add_page(current_page)
         return "\n".join(self.pages)
 
 
