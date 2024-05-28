@@ -1,6 +1,6 @@
 import base64
 import logging
-from typing import Tuple
+from typing import List, Tuple
 
 import docx
 from docx import Document
@@ -14,8 +14,7 @@ from .ocr import run_ocr
 
 class DocxConverter(BookConversion):
     """
-    Class to convert a Word document to structured text, extract images,
-    perform OCR, and split content into chapters.
+    Class to convert a Word document to structured text.
 
     Attributes:
         file_path (str): The path to the Word document.
@@ -23,34 +22,21 @@ class DocxConverter(BookConversion):
         doc (Document): The parsed Word document object.
         paragraphs (list): List of paragraphs objects extracted from the
             document.
-        pages (list): List of parsed text pages.
-
-    Methods:
-        extract_paragraphs: Extracts paragraphs from the Word document.
-        extract_paragraph_text: Extracts text content from a paragraph and
-            performs OCR on images.
-        clean_text: Cleans smart punctuation from the text.
-        split_chapters: Splits the paragraphs into chapters.
     """
 
     def __init__(self, file_path: str, metadata: dict):
         """
-        Calls the __init__ method of the parent BookConversion class which
-        calls assigns the return of the _read_file method to self.book. Then
-        extracts the paragraph objects from the book and puts them in the
-        paragraphs list before initializing the non_chapter flag and
-        pages_list
+        Initializes the DocxConverter with file path and metadata.
         """
         super().__init__(file_path, metadata)
         self.paragraphs: list = self.extract_paragraphs()
 
-        self.non_chapter: bool = False
-        self.pages_list: list = []
-
     def _read_file(self, file_path: str) -> Document:
         """
-        Reads a Word document from the specified file path and returns a
-        Document object representing the parsed content.
+        Reads a Word document from the specified file path.
+
+        Returns:
+            Document: The parsed Word document object.
         """
         return docx.Document(file_path)
 
@@ -62,6 +48,163 @@ class DocxConverter(BookConversion):
             list: A list of paragraph objects extracted from the document.
         """
         return self.book.paragraphs
+
+    def _extract_images(self, paragraph: Paragraph) -> List[str]:
+        image_extractor = DocxImageExtractor(paragraph)
+        return image_extractor.extract_images()
+
+    def extract_text(self, paragraph: Paragraph) -> str:
+        text_extractor = DocxTextExtractor(paragraph, self)
+        return text_extractor.extract_text()
+
+    def _split_book(self) -> None:
+        """
+        Splits the paragraphs into chapters using the ChapterSplitter.
+        """
+        splitter = DocxChapterSplitter(self.paragraphs, self.metadata, self)
+        self._parsed_book = splitter.split_chapters()
+
+    def split_chapters(self) -> str:
+        if self._parsed_book is None:
+            self._split_book()
+        return self._parsed_book
+
+
+class DocxImageExtractor:
+    """
+    A class dedicated to extracting images from docx Paragraph objects.
+    """
+
+    def __init__(self, paragraph: Paragraph):
+        self.paragraph = paragraph
+
+    def extract_images(self) -> List[str]:
+        """
+        Extracts and converts images found in the paragraph into
+        base64-encoded strings.
+
+        Returns:
+            list: A list of base64-encoded strings, each representing an image
+                extracted from the paragraph.
+        """
+        image_blobs: list = self._extract_image_blobs()
+        return self._build_base64_images_list(image_blobs)
+
+    def _extract_image_blobs(self) -> list:
+        """
+        Extracts image blobs from the paragraph.
+
+        Returns:
+            list: A list of image blobs extracted from the paragraph.
+        """
+        namespace: dict = docx_ns_map
+        image_blobs: list = []
+
+        blips = self.paragraph._p.findall(".//a:blip", namespaces=namespace)
+        for blip in blips:
+            try:
+                rId = blip.attrib[f"{{{namespace['r']}}}embed"]
+                image_part = self.paragraph.part.related_parts[rId]
+                image_blobs.append(image_part.blob)
+            except Exception as e:
+                logging.exception("Could not extract images %s", str(e))
+        return image_blobs
+
+    def _build_base64_images_list(self, image_blobs: list) -> list:
+        """
+        Converts image blobs to base64-encoded strings.
+
+        Args:
+            image_blobs (list): A list of image blobs extracted from the
+                paragraph.
+
+        Returns:
+            list: A list of base64-encoded strings representing the images.
+        """
+        return [
+            base64.b64encode(image).decode("utf-8") for image in image_blobs
+        ]
+
+
+class DocxTextExtractor:
+    """
+    Class dedicated to extracting and processing text from docx Paragraphs.
+    """
+
+    def __init__(self, paragraph: Paragraph, parent: DocxConverter):
+        self.paragraph = paragraph
+        self.parent = parent
+
+    def extract_text(self) -> str:
+        """
+        Extracts the text content from the paragraph, performs OCR on any
+        images present, and returns the combined text.
+        """
+        ocr_text: str = self._extract_image_text()
+        paragraph_text: str = self.paragraph.text.strip()
+        return ocr_text if ocr_text else paragraph_text
+
+    def _extract_image_text(self) -> str:
+        """
+        Extracts text from images within the paragraph using OCR.
+        """
+        base64_images: list = self.parent._extract_images(self.paragraph)
+        if base64_images:
+            return run_ocr(base64_images)
+        return ""
+
+
+class DocxChapterSplitter:
+    """
+    Class responsible for splitting a list of paragraphs into chapters for a
+    DOCX file.
+    """
+
+    def __init__(
+        self,
+        paragraphs: List[Paragraph],
+        metadata: dict,
+        parent: DocxConverter,
+    ):
+        self.paragraphs = paragraphs
+        self.metadata = metadata
+        self.parent = parent
+
+        self.non_chapter: bool = False
+        self.pages_list: list = []
+
+        self.MAX_LINES_TO_CHECK: int = 3
+
+    def split_chapters(self) -> str:
+        """
+        Process paragraphs to organize them into pages and chapters, handling
+        page breaks and chapter starts, and compile the final structured text
+        of the book.
+
+        Returns:
+            str: The structured text of the entire book.
+        """
+        current_page: list = []
+        current_para_index: int = 0
+
+        for paragraph in self.paragraphs:
+            paragraph_text = self.parent.extract_text(paragraph)
+            current_para_index += 1
+
+            if self._contains_page_break(paragraph):
+                self._add_page(current_page)
+                current_page = []
+                current_para_index = 0
+
+            if paragraph_text:
+                (processed_text, current_para_index) = self._process_text(
+                    paragraph_text, current_para_index
+                )
+                current_page.append(processed_text)
+
+        if current_page:
+            self._add_page(current_page)
+        return "\n".join(self.pages_list)
 
     def _contains_page_break(self, paragraph: Paragraph) -> bool:
         """
@@ -78,78 +221,6 @@ class DocxConverter(BookConversion):
                 # FutureWarning warning
                 return True
         return False
-
-    def _extract_images(self, paragraph: Paragraph) -> list:
-        """
-        Extracts and converts images found in a Word document's paragraph into
-        base64-encoded strings.
-
-        Args:
-            paragraph: A paragraph object from a `.docx` file, which contains
-                runs and potentially inline images.
-
-        Returns:
-            list: A list of base64-encoded strings, each representing an image
-                extracted from the paragraph.
-        """
-        image_blobs: list = self._extract_image_blobs(paragraph)
-        base64_images: list = self._build_base64_images_list(image_blobs)
-        return base64_images
-
-    def _extract_image_blobs(self, paragraph: Paragraph) -> list:
-        """
-        Extracts image blobs from a paragraph in a Word document and returns a
-        list of these blobs.
-
-        Args:
-            paragraph (Paragraph): The paragraph object from a Word document
-                containing runs with potential images.
-
-        Returns:
-            list: A list of image blobs extracted from the paragraph.
-        """
-        namespace: dict = docx_ns_map
-        image_blobs: list = []
-
-        blips = paragraph._element.findall(".//a:blip", namespaces=namespace)
-        for blip in blips:
-            try:
-                rId = blip.attrib[f"{{{namespace['r']}}}embed"]
-                image_part = paragraph.part.related_parts[rId]
-                image_blobs.append(image_part.blob)
-            except Exception as e:
-                logging.exception("Could not extract images %s", str(e))
-        return image_blobs
-
-    def _build_base64_images_list(self, image_blobs: list) -> list:
-        """
-        Extracts and converts images found in a Word document's paragraph into
-        base64-encoded strings.
-
-        Args:
-            image_blobs (list): A list of image blobs extracted from the
-                paragraph.
-
-        Returns:
-            list: A list of base64-encoded strings representing the images.
-        """
-        base64_images = [
-            base64.b64encode(image).decode("utf-8") for image in image_blobs
-        ]
-        return base64_images
-
-    def extract_text(self, paragraph: Paragraph) -> str:
-        """
-        Extracts the text content from a paragraph in a Word document,
-        performs optical character recognition (OCR) on any images present in
-        the paragraph, and returns the recognized text
-        """
-        ocr_text: str = ""
-        base64_images: list = self._extract_images(paragraph)
-        if base64_images:
-            ocr_text = run_ocr(base64_images)
-        paragraph_text: str = paragraph.text.strip()
-        return ocr_text if ocr_text else paragraph_text
 
     def _check_index(self, index: int) -> bool:
         """
@@ -225,7 +296,7 @@ class DocxConverter(BookConversion):
         elif self.non_chapter:
             processed_text = ""
         else:
-            processed_text = self.clean_text(paragraph_text)
+            processed_text = self.parent.clean_text(paragraph_text)
         return processed_text, current_para_index
 
     def _add_page(self, current_page: list) -> None:
@@ -244,42 +315,10 @@ class DocxConverter(BookConversion):
         if filtered_page:
             self.pages_list.extend(filtered_page)
 
-    def _split_book(self) -> str:
-        """
-        Process paragraphs to organize them into pages and chapters, handling
-        page breaks and chapter starts, and compile the final structured text
-        of the book.
-
-        Returns:
-            str: The structured text of the entire book.
-        """
-        current_page: list = []
-        current_para_index: int = 0
-
-        for paragraph in self.paragraphs:
-            paragraph_text = self.extract_text(paragraph)
-            current_para_index += 1
-
-            if self._contains_page_break(paragraph):
-                self._add_page(current_page)
-                current_page = []
-                current_para_index = 0
-
-            if paragraph_text:
-                (processed_text, current_para_index) = self._process_text(
-                    paragraph_text, current_para_index
-                )
-                current_page.append(processed_text)
-
-        if current_page:
-            self._add_page(current_page)
-        self._parsed_book = "\n".join(self.pages_list)
-
 
 def read_docx(file_path: str, metadata: dict) -> str:
     """
-    Reads the contents of a DOCX file, preprocesses it, and returns it as a
-    string.
+    Reads the contents of a DOCX file and returns the processed text.
 
     Args:
         file_path (str): The path to the DOCX file.
