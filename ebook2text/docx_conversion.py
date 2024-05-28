@@ -1,14 +1,17 @@
-import base64
 import logging
 from typing import List, Tuple
 
 import docx
-from docx import Document
-from docx.text.paragraph import Paragraph
 
-from .abstract_book import BookConversion
+from ._namespaces import docx_ns_map
+from ._types import Document, Paragraph
+from .abstract_book import (
+    BookConversion,
+    ChapterSplit,
+    ImageExtraction,
+    TextExtraction,
+)
 from .chapter_check import is_chapter, is_not_chapter
-from .namespaces import docx_ns_map
 from .ocr import run_ocr
 
 
@@ -49,7 +52,7 @@ class DocxConverter(BookConversion):
         """
         return self.book.paragraphs
 
-    def _extract_images(self, paragraph: Paragraph) -> List[str]:
+    def extract_images(self, paragraph: Paragraph) -> List[str]:
         image_extractor = DocxImageExtractor(paragraph)
         return image_extractor.extract_images()
 
@@ -57,20 +60,15 @@ class DocxConverter(BookConversion):
         text_extractor = DocxTextExtractor(paragraph, self)
         return text_extractor.extract_text()
 
-    def _split_book(self) -> None:
+    def split_chapters(self) -> None:
         """
         Splits the paragraphs into chapters using the ChapterSplitter.
         """
         splitter = DocxChapterSplitter(self.paragraphs, self.metadata, self)
-        self._parsed_book = splitter.split_chapters()
-
-    def split_chapters(self) -> str:
-        if self._parsed_book is None:
-            self._split_book()
-        return self._parsed_book
+        return splitter.split_chapters()
 
 
-class DocxImageExtractor:
+class DocxImageExtractor(ImageExtraction):
     """
     A class dedicated to extracting images from docx Paragraph objects.
     """
@@ -110,23 +108,8 @@ class DocxImageExtractor:
                 logging.exception("Could not extract images %s", str(e))
         return image_blobs
 
-    def _build_base64_images_list(self, image_blobs: list) -> list:
-        """
-        Converts image blobs to base64-encoded strings.
 
-        Args:
-            image_blobs (list): A list of image blobs extracted from the
-                paragraph.
-
-        Returns:
-            list: A list of base64-encoded strings representing the images.
-        """
-        return [
-            base64.b64encode(image).decode("utf-8") for image in image_blobs
-        ]
-
-
-class DocxTextExtractor:
+class DocxTextExtractor(TextExtraction):
     """
     Class dedicated to extracting and processing text from docx Paragraphs.
     """
@@ -148,13 +131,13 @@ class DocxTextExtractor:
         """
         Extracts text from images within the paragraph using OCR.
         """
-        base64_images: list = self.parent._extract_images(self.paragraph)
+        base64_images: list = self.parent.extract_images(self.paragraph)
         if base64_images:
             return run_ocr(base64_images)
         return ""
 
 
-class DocxChapterSplitter:
+class DocxChapterSplitter(ChapterSplit):
     """
     Class responsible for splitting a list of paragraphs into chapters for a
     DOCX file.
@@ -166,14 +149,11 @@ class DocxChapterSplitter:
         metadata: dict,
         parent: DocxConverter,
     ):
-        self.paragraphs = paragraphs
-        self.metadata = metadata
-        self.parent = parent
+        super().__init__(paragraphs, metadata, parent)
+        self.paragraphs = self.text_obj
 
         self.non_chapter: bool = False
         self.pages_list: list = []
-
-        self.MAX_LINES_TO_CHECK: int = 3
 
     def split_chapters(self) -> str:
         """
@@ -284,11 +264,10 @@ class DocxChapterSplitter:
             Tuple[str, int]: A tuple containing the processed text and the
                 updated index of the paragraph within its chapter.
         """
-        CHAPTER_SEPARATOR = "***"
 
         if self._is_start_of_chapter(paragraph_text, current_para_index):
             current_para_index = 0
-            processed_text = CHAPTER_SEPARATOR if self.pages_list else ""
+            processed_text = self.CHAPTER_SEPARATOR if self.pages_list else ""
             self.non_chapter = False
         elif self._is_non_chapter(paragraph_text, current_para_index):
             processed_text = ""
