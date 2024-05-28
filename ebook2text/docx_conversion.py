@@ -1,3 +1,4 @@
+import base64
 import logging
 from typing import List, Tuple
 
@@ -87,6 +88,20 @@ class DocxImageExtractor(ImageExtraction):
         """
         image_blobs: list = self._extract_image_blobs()
         return self._build_base64_images_list(image_blobs)
+
+    def _build_base64_images_list(self, image_streams: list) -> list:
+        """
+        Converts image blobs to base64-encoded strings.
+
+        Args:
+            image_blobs (list): A list of extracted image streams.
+
+        Returns:
+            list: A list of base64-encoded strings representing the images.
+        """
+        return [
+            base64.b64encode(image).decode("utf-8") for image in image_streams
+        ]
 
     def _extract_image_blobs(self) -> list:
         """

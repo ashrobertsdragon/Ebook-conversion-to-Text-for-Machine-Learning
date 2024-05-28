@@ -1,4 +1,3 @@
-import base64
 from abc import ABC, abstractmethod
 from typing import List
 
@@ -25,20 +24,6 @@ class ImageExtraction(ABC):
     @abstractmethod
     def extract_images(self) -> List[str]:
         raise NotImplementedError("Must be implemented in child class")
-
-    def _build_base64_images_list(self, image_streams: list) -> list:
-        """
-        Converts image blobs to base64-encoded strings.
-
-        Args:
-            image_blobs (list): A list of extracted image streams.
-
-        Returns:
-            list: A list of base64-encoded strings representing the images.
-        """
-        return [
-            base64.b64encode(image).decode("utf-8") for image in image_streams
-        ]
 
 
 class TextExtraction(ABC):
