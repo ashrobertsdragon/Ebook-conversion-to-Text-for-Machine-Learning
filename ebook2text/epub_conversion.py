@@ -1,8 +1,10 @@
+from typing import List
+
 import ebooklib
 from bs4 import BeautifulSoup
 from ebooklib import epub
-from ebooklib.epub import EpubBook
 
+from ._types import EpubBook, EpubItem, ResultSet, Tag
 from .abstract_book import (
     BookConversion,
     ChapterSplit,
@@ -10,7 +12,7 @@ from .abstract_book import (
     TextExtraction,
 )
 from .chapter_check import NOT_CHAPTER, is_chapter, is_not_chapter
-from .ocr import encode_image, run_ocr
+from .ocr import encode_image_file, run_ocr
 
 
 class EpubConverter(BookConversion):
@@ -22,26 +24,26 @@ class EpubConverter(BookConversion):
     processing chapter text, and splitting chapters.
 
     Args:
-        file_path (str): The path to the PDF file to be read.
+        file_path (str): The path to the EPUB file to be read.
         metadata (dict): A dictionary containing metadata such as title and
             author information.
     """
 
     def _read_file(self, file_path: str) -> EpubBook:
         """Reads Epub file using Ebooklib package"""
-        return epub.read_epub(file_path, options={"ignore_ncx": True})
+        return epub.read_epub(file_path)
 
-    def extract_images(self, element) -> list:
+    def extract_images(self, element: Tag) -> List[str]:
         """Delegates to EpubImageExtractor to extract images."""
         image_extractor = EpubImageExtractor(self.book)
         return image_extractor.extract_images(element)
 
-    def extract_text(self, element) -> str:
+    def extract_text(self, element: Tag) -> str:
         """Delegates to EpubTextExtractor to extract text."""
-        text_extractor = EpubTextExtractor(self.book, self)
+        text_extractor = EpubTextExtractor(self)
         return text_extractor.extract_text(element)
 
-    def split_chapters(self) -> None:
+    def split_chapters(self) -> str:
         """
         Splits the EPUB file into chapters.
         """
@@ -57,7 +59,7 @@ class EpubTextExtractor(TextExtraction):
     def __init__(self, parent: EpubConverter):
         self.parent = parent
 
-    def extract_text(self, element) -> str:
+    def extract_text(self, element: Tag) -> str:
         """
         Extracts text from an element, using OCR for images.
 
@@ -69,11 +71,16 @@ class EpubTextExtractor(TextExtraction):
             str: The extracted text from the element.
         """
         if element.name == "img":
-            base64_images = self.parent.extract_images(element)
-            text = run_ocr(base64_images)
+            return self._extract_image_text(element)
         else:
-            text = element.get_text().strip()
-        return text
+            return self._extract_text(element)
+
+    def _extract_image_text(self, element: Tag) -> str:
+        base64_images: list = self.parent.extract_images(element)
+        return run_ocr(base64_images)
+
+    def _extract_text(self, element: Tag) -> str:
+        return element.get_text().strip()
 
 
 class EpubImageExtractor(ImageExtraction):
@@ -84,7 +91,7 @@ class EpubImageExtractor(ImageExtraction):
     def __init__(self, book: EpubBook):
         self.book = book
 
-    def extract_images(self, element) -> list:
+    def extract_images(self, element: Tag) -> list:
         """
         Extracts images from the EPUB file.
 
@@ -94,11 +101,11 @@ class EpubImageExtractor(ImageExtraction):
         Returns:
             list: A list of encoded image data.
         """
-        image_data = self.book.read_item(element["src"])
-        return [encode_image(image_data)]
+        image_data: EpubItem = self.book.get_item_with_href(element["src"])
+        return [encode_image_file(image_data)]
 
 
-class EpubChapterSplitter(ChapterSplit):
+class EpubChapterSplitter(ChapterSplit[EpubBook]):
     """
     Splits an EPUB file into chapters.
     """
@@ -106,6 +113,7 @@ class EpubChapterSplitter(ChapterSplit):
     def __init__(self, book: EpubBook, metadata: dict, parent: EpubConverter):
         super().__init__(book, metadata, parent)
         self.book = self.text_obj
+        self.parent = parent
 
     def _process_chapter_text(self, item) -> str:
         """
@@ -119,10 +127,10 @@ class EpubChapterSplitter(ChapterSplit):
         """
         TEXT_ELEMENTS = ["p", "img", "h1", "h2", "h3", "h4", "h5", "h6"]
         soup = BeautifulSoup(item.content, "html.parser")
-        elements = soup.find_all(TEXT_ELEMENTS)
+        elements: ResultSet[Tag] = soup.find_all(TEXT_ELEMENTS)
 
         for i, element in enumerate(elements[: self.MAX_LINES_TO_CHECK]):
-            text = self.parent.extract_text(element, self.book)
+            text = self.parent.extract_text(element)
             if any(word in NOT_CHAPTER for word in text.split()):
                 return ""
             elif is_chapter(text):

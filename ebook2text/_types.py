@@ -1,21 +1,20 @@
-from typing import List, Union
-
+from bs4.element import ResultSet, Tag
 from docx import Document
 from docx.text.paragraph import Paragraph
-from ebooklib.epub import EpubBook
+from ebooklib.epub import EpubBook, EpubItem
 from pdfminer.layout import LTChar, LTContainer, LTPage, LTText
 from pdfminer.pdftypes import PDFStream
-
-SplitType = Union[List[Paragraph], EpubBook, List[LTPage]]
 
 __all__ = [
     "Document",
     "EpubBook",
+    "EpubItem",
     "LTChar",
     "LTContainer",
     "LTText",
     "LTPage",
-    "PDFStream",
     "Paragraph",
-    "SplitType",
+    "PDFStream",
+    "ResultSet",
+    "Tag",
 ]
