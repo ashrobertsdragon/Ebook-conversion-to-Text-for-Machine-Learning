@@ -9,7 +9,7 @@ from openai.types.chat.chat_completion import ChatCompletion
 load_dotenv()
 
 
-def encode_image(image_path):
+def encode_image_file(image_path: str) -> str:
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode("utf-8")
 
