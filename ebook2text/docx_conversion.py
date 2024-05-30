@@ -54,14 +54,14 @@ class DocxConverter(BookConversion):
         return self.book.paragraphs
 
     def extract_images(self, paragraph: Paragraph) -> List[str]:
-        image_extractor = DocxImageExtractor(paragraph)
-        return image_extractor.extract_images()
+        image_extractor = DocxImageExtractor()
+        return image_extractor.extract_images(paragraph)
 
     def extract_text(self, paragraph: Paragraph) -> str:
-        text_extractor = DocxTextExtractor(paragraph, self)
-        return text_extractor.extract_text()
+        text_extractor = DocxTextExtractor(self)
+        return text_extractor.extract_text(paragraph)
 
-    def split_chapters(self) -> None:
+    def split_chapters(self) -> str:
         """
         Splits the paragraphs into chapters using the ChapterSplitter.
         """
@@ -74,10 +74,7 @@ class DocxImageExtractor(ImageExtraction):
     A class dedicated to extracting images from docx Paragraph objects.
     """
 
-    def __init__(self, paragraph: Paragraph):
-        self.paragraph = paragraph
-
-    def extract_images(self) -> List[str]:
+    def extract_images(self, paragraph: Paragraph) -> List[str]:
         """
         Extracts and converts images found in the paragraph into
         base64-encoded strings.
@@ -86,6 +83,7 @@ class DocxImageExtractor(ImageExtraction):
             list: A list of base64-encoded strings, each representing an image
                 extracted from the paragraph.
         """
+        self.paragraph = paragraph
         image_blobs: list = self._extract_image_blobs()
         return self._build_base64_images_list(image_blobs)
 
@@ -129,24 +127,23 @@ class DocxTextExtractor(TextExtraction):
     Class dedicated to extracting and processing text from docx Paragraphs.
     """
 
-    def __init__(self, paragraph: Paragraph, parent: DocxConverter):
-        self.paragraph = paragraph
+    def __init__(self, parent: DocxConverter):
         self.parent = parent
 
-    def extract_text(self) -> str:
+    def extract_text(self, paragraph: Paragraph) -> str:
         """
         Extracts the text content from the paragraph, performs OCR on any
         images present, and returns the combined text.
         """
-        ocr_text: str = self._extract_image_text()
-        paragraph_text: str = self.paragraph.text.strip()
+        ocr_text: str = self._extract_image_text(paragraph)
+        paragraph_text: str = paragraph.text.strip()
         return ocr_text if ocr_text else paragraph_text
 
-    def _extract_image_text(self) -> str:
+    def _extract_image_text(self, paragraph: Paragraph) -> str:
         """
         Extracts text from images within the paragraph using OCR.
         """
-        base64_images: list = self.parent.extract_images(self.paragraph)
+        base64_images: list = self.parent.extract_images(paragraph)
         if base64_images:
             return run_ocr(base64_images)
         return ""
@@ -290,7 +287,7 @@ class DocxChapterSplitter(ChapterSplit):
         elif self.non_chapter:
             processed_text = ""
         else:
-            processed_text = self.parent.clean_text(paragraph_text)
+            processed_text = self.clean_text(paragraph_text)
         return processed_text, current_para_index
 
     def _add_page(self, current_page: list) -> None:
@@ -305,7 +302,7 @@ class DocxChapterSplitter(ChapterSplit):
             Modifies the `self.pages` list by appending the non-empty page
             content.
         """
-        filtered_page = list(filter(None, current_page))
+        filtered_page: List[str] = list(filter(None, current_page))
         if filtered_page:
             self.pages_list.extend(filtered_page)
 
