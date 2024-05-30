@@ -1,7 +1,7 @@
 import base64
 import logging
 from io import BytesIO
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Tuple, Union
 
 from pdfminer.high_level import extract_pages
 from pdfminer.pdfdocument import PDFDocument
@@ -11,7 +11,7 @@ from pdfminer.pdftypes import PDFStream
 from PIL import Image
 
 from ._exceptions import ImageTooLargeError, ImageTooSmallError
-from ._types import LTChar, LTContainer, LTPage, LTText, SplitType
+from ._types import LTChar, LTContainer, LTPage, LTText
 from .abstract_book import (
     BookConversion,
     ChapterSplit,
@@ -49,7 +49,7 @@ class PDFConverter(BookConversion):
             List[LTPage]: List of page objects.
         """
         try:
-            return extract_pages(file_path)
+            return list(extract_pages(file_path))
         except Exception as e:
             logging.error(f"Error reading PDF file: {e}")
             return []
@@ -107,11 +107,14 @@ class PDFChapterSplitter(ChapterSplit):
         parent: The parent object.
     """
 
-    def __init__(self, book: SplitType, metadata: dict, parent):
-        super().__init__(book, metadata, parent)
+    def __init__(
+        self, book: List[LTPage], metadata: dict, factory: PDFConverter
+    ):
+        super().__init__(book, metadata, factory)
         self.book = self.text_obj
+        self.factory = factory
 
-    def _process_text(self, page_text) -> str:
+    def _process_text(self, page_text: str) -> str:
         """
         Parses the given pdf page and returns it as a string.
         Args:
@@ -183,7 +186,7 @@ class PDFChapterSplitter(ChapterSplit):
             if extracted_page:
                 text_parts.append(
                     processed_page
-                    if self.parent.ends_with_punctuation(processed_page)
+                    if self.factory.ends_with_punctuation(processed_page)
                     else "\n" + processed_page
                 )
         return "".join(text_parts)
@@ -198,6 +201,9 @@ class PDFTextExtractor(TextExtraction):
         extract_text: Extracts text from a PDF page, including OCR text from
             images.
     """
+
+    def __init__(self, parent: PDFConverter) -> None:
+        self.parent = parent
 
     def extract_text(self, page: LTPage) -> str:
         """
@@ -225,20 +231,21 @@ class PDFTextExtractor(TextExtraction):
         obj_nums: List[int] = []
         for element in page:
             obj_type, obj_data = self._process_element(element)
-            if obj_type == "image":
-                obj_nums.append(obj_data)
-            elif obj_type == "text":
-                pdf_text_list.append(obj_data)
-        ocr_text = self._extract_text_from_image(obj_nums)
+            match obj_type:
+                case "image":
+                    obj_nums.append(int(obj_data))
+                case "text":
+                    pdf_text_list.append(str(obj_data))
+                case _:
+                    pass
+        ocr_text = self._extract_image_text(obj_nums)
         return (
             self._join_paragraph(pdf_text_list)
             if not ocr_text
             else ocr_text + "\n" + self._join_paragraph(pdf_text_list)
         )
 
-    def _process_element(
-        self, element: Any
-    ) -> Tuple[str, Union[int, str, None]]:
+    def _process_element(self, element: Any) -> Tuple[str, Union[int, str]]:
         """
         Processes a PDF layout element to identify its type and extract
         relevant data.
@@ -254,7 +261,7 @@ class PDFTextExtractor(TextExtraction):
             element (Any): A PDF layout element from pdfminer.
 
         Returns:
-            Tuple[str, Union[int, str, None]]: A tuple containing the element
+            Tuple[str, Union[int, str]]: A tuple containing the element
                 type and its relevant data (object ID for images or text
                 content for text elements), or None for other types.
         """
@@ -265,7 +272,7 @@ class PDFTextExtractor(TextExtraction):
         elif isinstance(element, LTContainer):
             for child in element:
                 return self._process_element(child)
-        return "other", None
+        return "other", ""
 
     def _join_paragraph(self, paragraph: List[str]) -> str:
         """
@@ -289,8 +296,16 @@ class PDFTextExtractor(TextExtraction):
             for line in paragraph
         )
 
+    def _extract_image_text(self, obj_nums: List[int]) -> str:
+        """Collect list of Base64 encoded images and run them through OCR"""
+        base64_images = self.parent.extract_images(obj_nums)
+        return run_ocr(base64_images)
+
 
 class PDFImageExtractor(ImageExtraction):
+    def __init__(self, file_path: str) -> None:
+        self.file_path = file_path
+
     """
     PDFImageExtractor class for extracting images from PDF objects.
 
@@ -341,11 +356,6 @@ class PDFImageExtractor(ImageExtraction):
             ]
         return [image for image in base64_images if image]
 
-    def _extract_text_from_image(self, obj_nums: List[int]) -> str:
-        """Collect list of Base64 encoded images and run them through OCR"""
-        base64_images = self.extract_images(obj_nums)
-        return run_ocr(base64_images)
-
     def _create_image_from_binary(
         self, stream: bytes, width: int, height: int
     ) -> str:
@@ -375,7 +385,7 @@ class PDFImageExtractor(ImageExtraction):
             )
             return ""
 
-    def _get_image(self, obj_num: int, attempt: Optional[int] = 0) -> str:
+    def _get_image(self, obj_num: int, attempt: int = 0) -> str:
         """
         Processes and retrieves images from a PDF object.
 
@@ -405,7 +415,7 @@ class PDFImageExtractor(ImageExtraction):
                     )
                 if width > 1000 and height > 1000:
                     raise ImageTooLargeError("probably full page image")
-                stream: PDFStream = obj.get_data()
+                stream = obj.get_data()
                 return self._create_image_from_binary(stream, width, height)
             else:
                 obj_typ = type(obj)
@@ -414,6 +424,7 @@ class PDFImageExtractor(ImageExtraction):
                 )
         except TypeError as e:
             logging.exception("TypeError: %s", str(e))
+            return ""
         except ImageTooSmallError as e:
             logging.info(f"Issue: {e} with object: {obj_num}")
             return self._get_image(obj_num + 1, attempt + 1)
