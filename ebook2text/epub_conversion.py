@@ -56,8 +56,8 @@ class EpubTextExtractor(TextExtraction):
     Extracts text from EPUB elements, handling image OCR.
     """
 
-    def __init__(self, parent: EpubConverter):
-        self.parent = parent
+    def __init__(self, converter: EpubConverter):
+        self.converter = converter
 
     def extract_text(self, element: Tag) -> str:
         """
@@ -76,7 +76,7 @@ class EpubTextExtractor(TextExtraction):
             return self._extract_text(element)
 
     def _extract_image_text(self, element: Tag) -> str:
-        base64_images: list = self.parent.extract_images(element)
+        base64_images: list = self.converter.extract_images(element)
         return run_ocr(base64_images)
 
     def _extract_text(self, element: Tag) -> str:
@@ -110,10 +110,11 @@ class EpubChapterSplitter(ChapterSplit[EpubBook]):
     Splits an EPUB file into chapters.
     """
 
-    def __init__(self, book: EpubBook, metadata: dict, parent: EpubConverter):
-        super().__init__(book, metadata, parent)
+    def __init__(
+        self, book: EpubBook, metadata: dict, converter: EpubConverter
+    ) -> None:
+        super().__init__(book, metadata, converter)
         self.book = self.text_obj
-        self.parent = parent
 
     def _process_chapter_text(self, item) -> str:
         """
@@ -130,7 +131,7 @@ class EpubChapterSplitter(ChapterSplit[EpubBook]):
         elements: ResultSet[Tag] = soup.find_all(TEXT_ELEMENTS)
 
         for i, element in enumerate(elements[: self.MAX_LINES_TO_CHECK]):
-            text = self.parent.extract_text(element)
+            text = self.converter.extract_text(element)
             if any(word in NOT_CHAPTER for word in text.split()):
                 return ""
             elif is_chapter(text):
@@ -150,7 +151,7 @@ class EpubChapterSplitter(ChapterSplit[EpubBook]):
             str: The cleaned text of the chapters separated by '***'.
         """
         chapters: list = []
-        join_char = f"{self.CHAPTER_SEPARATOR}\n"
+        join_char = f"\n{self.CHAPTER_SEPARATOR}\n"
         for item in self.book.get_items():
             if (
                 item.get_type() == ebooklib.ITEM_DOCUMENT

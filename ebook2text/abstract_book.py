@@ -48,11 +48,11 @@ class TextExtraction(ABC, Generic[T]):
 class ChapterSplit(ABC, Generic[T]):
     @abstractmethod
     def __init__(
-        self, text_obj: T, metadata: dict, parent: BookConversion
+        self, text_obj: T, metadata: dict, converter: BookConversion
     ) -> None:
         self.text_obj = text_obj
         self.metadata = metadata
-        self.parent = parent
+        self.converter = converter
 
         self.MAX_LINES_TO_CHECK: int = 3
         self.CHAPTER_SEPARATOR: str = "***"

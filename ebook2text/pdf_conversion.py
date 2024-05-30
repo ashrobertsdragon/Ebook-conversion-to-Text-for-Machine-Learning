@@ -104,15 +104,17 @@ class PDFChapterSplitter(ChapterSplit):
     Args:
         book (SplitType): The PDF document to process.
         metadata (dict): Necessary metadata for processing.
-        parent: The parent object.
+        converter: The converter object.
     """
 
     def __init__(
-        self, book: List[LTPage], metadata: dict, factory: PDFConverter
+        self, book: List[LTPage], metadata: dict, converter: PDFConverter
     ):
-        super().__init__(book, metadata, factory)
+        super().__init__(book, metadata, converter)
         self.book = self.text_obj
-        self.factory = factory
+
+        # Without this, MyPy throws bad errror about missing method in parent
+        self.converter: PDFConverter = converter
 
     def _process_text(self, page_text: str) -> str:
         """
@@ -181,12 +183,12 @@ class PDFChapterSplitter(ChapterSplit):
         """
         text_parts: list = []
         for page in self.book:
-            extracted_page: str = self.parent.extract_text(page)
+            extracted_page: str = self.converter.extract_text(page)
             processed_page: str = self._process_text(extracted_page)
             if extracted_page:
                 text_parts.append(
                     processed_page
-                    if self.factory.ends_with_punctuation(processed_page)
+                    if self.converter.ends_with_punctuation(processed_page)
                     else "\n" + processed_page
                 )
         return "".join(text_parts)
@@ -202,8 +204,8 @@ class PDFTextExtractor(TextExtraction):
             images.
     """
 
-    def __init__(self, parent: PDFConverter) -> None:
-        self.parent = parent
+    def __init__(self, converter: PDFConverter) -> None:
+        self.converter = converter
 
     def extract_text(self, page: LTPage) -> str:
         """
@@ -291,14 +293,14 @@ class PDFTextExtractor(TextExtraction):
         """
         return "".join(
             line + "\n"
-            if self.parent.ends_with_punctuation(line)
+            if self.converter.ends_with_punctuation(line)
             else line + ""
             for line in paragraph
         )
 
     def _extract_image_text(self, obj_nums: List[int]) -> str:
         """Collect list of Base64 encoded images and run them through OCR"""
-        base64_images = self.parent.extract_images(obj_nums)
+        base64_images = self.converter.extract_images(obj_nums)
         return run_ocr(base64_images)
 
 

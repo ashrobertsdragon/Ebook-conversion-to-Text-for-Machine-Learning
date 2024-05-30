@@ -127,23 +127,23 @@ class DocxTextExtractor(TextExtraction):
     Class dedicated to extracting and processing text from docx Paragraphs.
     """
 
-    def __init__(self, parent: DocxConverter):
-        self.parent = parent
+    def __init__(self, converter: DocxConverter):
+        self.converter = converter
 
     def extract_text(self, paragraph: Paragraph) -> str:
         """
         Extracts the text content from the paragraph, performs OCR on any
         images present, and returns the combined text.
         """
-        ocr_text: str = self._extract_image_text(paragraph)
-        paragraph_text: str = paragraph.text.strip()
+        ocr_text = self._extract_image_text(paragraph)
+        paragraph_text = paragraph.text.strip()
         return ocr_text if ocr_text else paragraph_text
 
     def _extract_image_text(self, paragraph: Paragraph) -> str:
         """
         Extracts text from images within the paragraph using OCR.
         """
-        base64_images: list = self.parent.extract_images(paragraph)
+        base64_images: list = self.converter.extract_images(paragraph)
         if base64_images:
             return run_ocr(base64_images)
         return ""
@@ -159,9 +159,9 @@ class DocxChapterSplitter(ChapterSplit):
         self,
         paragraphs: List[Paragraph],
         metadata: dict,
-        parent: DocxConverter,
+        converter: DocxConverter,
     ):
-        super().__init__(paragraphs, metadata, parent)
+        super().__init__(paragraphs, metadata, converter)
         self.paragraphs = self.text_obj
 
         self.non_chapter: bool = False
@@ -180,7 +180,7 @@ class DocxChapterSplitter(ChapterSplit):
         current_para_index: int = 0
 
         for paragraph in self.paragraphs:
-            paragraph_text = self.parent.extract_text(paragraph)
+            paragraph_text = self.converter.extract_text(paragraph)
             current_para_index += 1
 
             if self._contains_page_break(paragraph):
