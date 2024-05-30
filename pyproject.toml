@@ -59,3 +59,6 @@ exclude = [".git", "__pycache__", ".venv"]
 
 [tool.isort]
 line_length = 79
+
+[mypy]
+disable_error_code = import-untyped
