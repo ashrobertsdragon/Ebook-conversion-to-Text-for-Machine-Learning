@@ -66,18 +66,20 @@ def run_ocr(base64_images: list) -> str:
     Returns str: The recognized text from the images.
     """
     payload: list = create_payload(base64_images)
-    api_key: str = os.getenv("OPENAI_API_KEY")
+    api_key: str = os.getenv("OPENAI_API_KEY", "")
     client: OpenAI = OpenAI(api_key=api_key)
 
     try:
         response: ChatCompletion = client.chat.completions.create(
             model="gpt-4o", messages=payload, max_tokens=10
         )
-        if response.choices:
-            answer = response.choices[0].message.content
+        if response.choices and response.choices[0].message.content:
+            answer: str = response.choices[0].message.content
             if answer.startswith("I'm sorry, but as an"):
                 return run_ocr(base64_images)
             return clean_response(answer)
+        else:
+            raise Exception("No response found")
     except Exception as e:
         logging.exception("An error occured %s", str(e))
         return ""
