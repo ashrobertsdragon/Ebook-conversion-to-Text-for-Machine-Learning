@@ -61,4 +61,4 @@ exclude = [".git", "__pycache__", ".venv"]
 line_length = 79
 
 [mypy]
-disable_error_code = import-untyped
+disable_error_code = "import-untyped"
