@@ -1,7 +1,11 @@
 import os
+import pathlib
 import re
 
 from setuptools import find_packages, setup
+
+here = pathlib.Path(__file__).parent.resolve()
+long_description = (here / "README.md").read_text(encoding="utf-8")
 
 
 def get_version():
@@ -20,8 +24,7 @@ setup(
     name="ebook2text",
     version=get_version(),
     description="Convert common book file types to text for machine learning",
-    long_description=open("README.md").read(),
-    long_description_content_type="text/markdown",
+    long_description=long_description,
     author="Ashlynn Antrobus",
     author_email="ashlynn@prosepal.io",
     packages=find_packages(),

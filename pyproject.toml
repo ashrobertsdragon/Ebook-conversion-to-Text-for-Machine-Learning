@@ -8,6 +8,22 @@ description = "Convert common book file types to text for machine learning"
 readme = "README.md"
 authors = [{name = "Ashlynn Antrobus", email = "ashlynn@prosepal.io"}]
 license = {text = "MIT"}
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing"
+]
 requires-python = ">= 3.8"
 dependencies = [
     "annotated-types>=0.4.0",
@@ -36,13 +52,6 @@ dependencies = [
     "soupsieve>1.2",
     "tqdm>=4.0.0",
     "typing-extensions>=4.9.0",
-]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
 ]
 dynamic = ["version"]
 
