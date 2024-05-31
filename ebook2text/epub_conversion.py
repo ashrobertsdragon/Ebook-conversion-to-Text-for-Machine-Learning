@@ -31,7 +31,7 @@ class EpubConverter(BookConversion):
 
     def _read_file(self, file_path: str) -> EpubBook:
         """Reads Epub file using Ebooklib package"""
-        return epub.read_epub(file_path)
+        return epub.read_epub(file_path, options={"ignore_ncx": True})
 
     def extract_images(self, element: Tag) -> List[str]:
         """Delegates to EpubImageExtractor to extract images."""
