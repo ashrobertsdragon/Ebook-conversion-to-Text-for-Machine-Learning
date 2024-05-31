@@ -8,6 +8,7 @@ __pycache__/
 *cache/
 folder/
 dist/
+build/
 
 *.egg-info
 *.lock
