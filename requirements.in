@@ -1,0 +1,7 @@
+pdfminer.six
+pillow
+EbookLib
+beautifulsoup4
+python-docx
+python-dotenv
+openai
