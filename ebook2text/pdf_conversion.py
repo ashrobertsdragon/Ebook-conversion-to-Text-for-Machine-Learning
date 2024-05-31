@@ -1,5 +1,6 @@
 import base64
 import logging
+import re
 from io import BytesIO
 from typing import Any, List, Tuple, Union
 
@@ -111,7 +112,7 @@ class PDFChapterSplitter(ChapterSplit):
         self, book: List[LTPage], metadata: dict, converter: PDFConverter
     ):
         super().__init__(book, metadata, converter)
-        self.book = self.text_obj
+        self.book: List[LTPage] = self.text_obj
 
         # Without this, MyPy throws bad errror about missing method in parent
         self.converter: PDFConverter = converter
@@ -123,15 +124,15 @@ class PDFChapterSplitter(ChapterSplit):
             page_text: A pdf page.
         Returns the pdf page as a string.
         """
-
-        pages: list = []
-        paragraph_lines: list = []
-
-        lines: list = page_text.split("\n")
+        pages: List[str] = []
+        paragraph_lines: List[str] = []
+        lines: List[str] = page_text.split("\n")
 
         for line in lines:
-            if line.strip():
-                paragraph_lines.append(self.clean_text(line))
+            stripped = line.strip()
+            if stripped:
+                cleaned = self.clean_text(line)
+                paragraph_lines.append(cleaned)
             elif paragraph_lines:
                 paragraph = self._process_paragraph(paragraph_lines)
                 if paragraph:
@@ -145,7 +146,7 @@ class PDFChapterSplitter(ChapterSplit):
 
         return "\n".join(pages)
 
-    def _process_paragraph(self, paragraph_lines: list) -> str:
+    def _process_paragraph(self, paragraph_lines: List[str]) -> str:
         """
         Processes a list of paragraph lines to filter out chapter boundaries
         and clean the text.
@@ -159,15 +160,16 @@ class PDFChapterSplitter(ChapterSplit):
         checked: int = 0
         paragraph: list = []
 
-        for line in paragraph_lines:
-            if line.strip() and checked < self.MAX_LINES_TO_CHECK:
+        for orig_line in paragraph_lines:
+            line = orig_line.strip()
+            if line and checked < self.MAX_LINES_TO_CHECK:
                 checked += 1
                 if is_not_chapter(line, self.metadata):
                     return ""
-                elif is_chapter(line):
+                if is_chapter(line):
                     line = self.CHAPTER_SEPARATOR
-                paragraph.append(line)
-        return "\n".join(paragraph) or ""
+            paragraph.append(line)
+        return "".join(paragraph)
 
     def split_chapters(self) -> str:
         """
@@ -183,15 +185,23 @@ class PDFChapterSplitter(ChapterSplit):
         """
         text_parts: list = []
         for page in self.book:
-            extracted_page: str = self.converter.extract_text(page)
-            processed_page: str = self._process_text(extracted_page)
+            extracted_page = self.converter.extract_text(page)
+            processed_page = self._process_text(extracted_page)
             if extracted_page:
                 text_parts.append(
                     processed_page
                     if self.converter.ends_with_punctuation(processed_page)
                     else "\n" + processed_page
                 )
-        return "".join(text_parts)
+        joined_parts = "".join(text_parts)
+        return self._remove_extra_separators(joined_parts)
+
+    def _remove_extra_separators(self, text: str) -> str:
+        """
+        Remove blank lines and chapter seperators from the beginning of the
+        file if there are any using a regex pattern.
+        """
+        return re.sub(r"^(\*\*\*|\n)+", "", text)
 
 
 class PDFTextExtractor(TextExtraction):
