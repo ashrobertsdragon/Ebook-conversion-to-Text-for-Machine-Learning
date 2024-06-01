@@ -19,7 +19,6 @@ import mimetypes
 
 from lxml import etree
 
-
 mimetype_initialised = False
 
 
@@ -66,8 +65,8 @@ def create_pagebreak(pageref, label=None, html=True):
 
     pageref_attributes = {
         '{%s}type' % NAMESPACES['EPUB']: 'pagebreak',
-        'title': u'{}'.format(pageref),
-        'id': u'{}'.format(pageref),
+        'title': '{}'.format(pageref),
+        'id': '{}'.format(pageref),
      }
 
     pageref_elem = etree.Element('span', pageref_attributes, nsmap={'epub': NAMESPACES['EPUB']})
@@ -100,7 +99,7 @@ def get_pages(item):
         if 'epub:type' in elem.attrib:
             if elem.get('id') is not None:
                 _text = None
-                
+
                 if elem.text is not None and elem.text.strip() != '':
                     _text = elem.text.strip()
 

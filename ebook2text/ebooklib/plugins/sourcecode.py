@@ -17,17 +17,16 @@
 from ebooklib.plugins.base import BasePlugin
 from ebooklib.utils import parse_html_string
 
-class SourceHighlighter(BasePlugin):    
+
+class SourceHighlighter(BasePlugin):
     def __init__(self):
         pass
 
     def html_before_write(self, book, chapter):
+        from ebooklib import epub
         from lxml import etree, html
-
         from pygments import highlight
         from pygments.formatters import HtmlFormatter
-
-        from ebooklib import epub
 
         try:
             tree = parse_html_string(chapter.content)
@@ -64,5 +63,4 @@ class SourceHighlighter(BasePlugin):
 
         if had_source:
             chapter.add_link(href="style/code.css", rel="stylesheet", type="text/css")
-            chapter.content = etree.tostring(tree, pretty_print=True, encoding='utf-8')        
-
+            chapter.content = etree.tostring(tree, pretty_print=True, encoding='utf-8')

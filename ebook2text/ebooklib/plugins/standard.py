@@ -15,7 +15,6 @@
 # along with EbookLib.  If not, see <http://www.gnu.org/licenses/>.
 
 import six
-
 from ebooklib.plugins.base import BasePlugin
 from ebooklib.utils import parse_html_string
 
@@ -34,7 +33,7 @@ DEPRECATED_TAGS = ['acronym', 'applet', 'basefont', 'big', 'center', 'dir', 'fon
 
 
 def leave_only(item, tag_list):
-    for _attr in six.iterkeys(item.attrib):
+    for _attr in item.attrib.keys():
         if _attr not in tag_list:
             del item.attrib[_attr]
 
@@ -58,9 +57,9 @@ class SyntaxPlugin(BasePlugin):
             etree.strip_tags(root, tag)
 
         head = tree.find('head')
-        
+
         if head is not None and len(head) != 0:
-            
+
             for _item in head:
                 if _item.tag == 'base':
                     leave_only(_item, ATTRIBUTES_GLOBAL + ['href', 'target'])
@@ -72,7 +71,7 @@ class SyntaxPlugin(BasePlugin):
                 elif _item.tag == 'meta':
                     leave_only(_item, ATTRIBUTES_GLOBAL + ['name', 'http-equiv', 'content', 'charset'])
                     # just remove for now, but really should not be like this
-                    head.remove(_item) 
+                    head.remove(_item)
                 elif _item.tag == 'script':
                     leave_only(_item, ATTRIBUTES_GLOBAL + ['src', 'type', 'charset', 'async', 'defer', 'crossorigin'])
                 elif _item.tag == 'source':
@@ -89,7 +88,7 @@ class SyntaxPlugin(BasePlugin):
             for _item in body.iter():
                 # it is not
                 # <a class="indexterm" href="ch05.html#ix_epub:trigger_element">
-                
+
                 if _item.tag == 'a':
                     leave_only(_item, ATTRIBUTES_GLOBAL + ['href', 'target', 'download', 'rel', 'hreflang', 'type'])
                 elif _item.tag == 'area':
@@ -214,17 +213,17 @@ class SyntaxPlugin(BasePlugin):
                     # We need to add property "svg" in case we have embeded svg file
                     if 'svg' not in chapter.properties:
                         chapter.properties.append('svg')
-                        
+
                     if _item.get('viewbox', None):
                         del _item.attrib['viewbox']
 
                     if _item.get('preserveaspectratio', None):
                         del _item.attrib['preserveaspectratio']
                 else:
-                    for _attr in six.iterkeys(_item.attrib):
+                    for _attr in _item.attrib.keys():
                         if _attr not in ATTRIBUTES_GLOBAL:
                             del _item.attrib[_attr]
 
         chapter.content = etree.tostring(tree, pretty_print=True, encoding='utf-8', xml_declaration=True)
-        
+
         return chapter.content

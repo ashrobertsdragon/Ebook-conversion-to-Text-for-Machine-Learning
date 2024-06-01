@@ -17,7 +17,6 @@ This Python script provides functionality for converting various ebook file form
 To run this script, you need Python 3.8 or above and the following packages:
 
 - `python-docx`
-- `ebooklib`
 - `openai`
 - `python-dotenv`
 - `bs4`
@@ -34,8 +33,6 @@ To run this script, you need Python 3.8 or above and the following packages:
 
 ## Functions
 
-- `read_text_file(file: str) -> str`: Reads a text file and returns its content.
-- `write_to_file(content: str, file: str)`: Writes content to a file.
 - `convert_file(file_path: str, metadata: dict) -> str`: Main function to convert an ebook file to text.
 
 ## Contributing

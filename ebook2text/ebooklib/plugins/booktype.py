@@ -17,6 +17,7 @@
 from ebooklib.plugins.base import BasePlugin
 from ebooklib.utils import parse_html_string
 
+
 class BooktypeLinks(BasePlugin):
     NAME = 'Booktype Links'
 
@@ -24,12 +25,12 @@ class BooktypeLinks(BasePlugin):
         self.booktype_book = booktype_book
 
     def html_before_write(self, book, chapter):
-        from lxml import  etree
+        from lxml import etree
 
         try:
-            from urlparse import urlparse, urljoin
+            from urlparse import urljoin, urlparse
         except ImportError:
-            from urllib.parse import urlparse, urljoin
+            from urllib.parse import urljoin, urlparse
 
         try:
             tree = parse_html_string(chapter.content)
@@ -81,9 +82,8 @@ class BooktypeFootnotes(BasePlugin):
         self.booktype_book = booktype_book
 
     def html_before_write(self, book, chapter):
-        from lxml import etree
-
         from ebooklib import epub
+        from lxml import etree
 
         try:
             tree = parse_html_string(chapter.content)

@@ -14,9 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with EbookLib.  If not, see <http://www.gnu.org/licenses/>.
 
-import six
 import subprocess
 
+import six
 from ebooklib.plugins.base import BasePlugin
 from ebooklib.utils import parse_html_string
 
@@ -26,7 +26,7 @@ from ebooklib.utils import parse_html_string
 def tidy_cleanup(content, **extra):
     cmd = []
 
-    for k, v in six.iteritems(extra):
+    for k, v in extra.items():
 
         if v:
             cmd.append('--%s' % k)
@@ -36,8 +36,8 @@ def tidy_cleanup(content, **extra):
 
     # must parse all other extra arguments
     try:
-        p = subprocess.Popen(['tidy']+cmd, shell=False, 
-                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, 
+        p = subprocess.Popen(['tidy']+cmd, shell=False,
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, close_fds=True)
     except OSError:
         return (3, None)
@@ -79,4 +79,3 @@ class TidyPlugin(BasePlugin):
         (_, chapter.content) = tidy_cleanup(chapter.content, **self.options)
 
         return chapter.content
-
