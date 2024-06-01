@@ -1,4 +1,3 @@
-import os
 import pathlib
 import re
 
@@ -9,7 +8,7 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 
 
 def get_version():
-    version_file = os.path.join("ebook2text", "VERSION.py")
+    version_file = here / "VERSION.py"
     with open(version_file) as f:
         version_content = f.read()
     version_match = re.search(
@@ -31,7 +30,6 @@ setup(
     install_requires=[
         "pdfminer.six",
         "pillow",
-        "EbookLib",
         "beautifulsoup4",
         "python-docx",
         "python-dotenv",

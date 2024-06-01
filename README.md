@@ -75,3 +75,6 @@ This project is licensed by ProsePal LLC under the MIT license
 
 - **v1.1.0** (Release date: May 30, 2024)
   - Change to abstract factory pattern
+
+- **v1.1.1** (Release date: May 31, 2024)
+  - Pulled current version of ebooklib from Github and folded it into library since package repo out of date
