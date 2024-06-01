@@ -5,9 +5,10 @@ __pycache__/
 .local/
 .venv/
 .vscode/
-.pytest_cache/
-.ruff_cache/
+*cache/
 folder/
+dist/
+build/
 
 *.egg-info
 *.lock

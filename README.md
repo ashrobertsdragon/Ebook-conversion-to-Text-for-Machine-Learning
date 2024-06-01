@@ -3,7 +3,7 @@
 
 ## Overview
 
-This Python script provides functionality for converting various ebook file formats (EPUB, DOCX, PDF, TXT) into a standardized text format. The script processes each file, identifying chapters, and replaces chapter headers with asterisks. It also performs OCR (Optical Character Recognition) for image-based text and standardizes the text by desmartenizing punctuation.
+This Python script provides functionality for converting various ebook file formats (EPUB, DOCX, PDF, TXT) into a standardized text format. The script processes each file, identifying chapters, and replaces chapter headers with asterisks. It also performs OCR (Optical Character Recognition) for image-based text using GPT-4o and standardizes the text by desmartenizing punctuation.
 
 ## Features
 
@@ -18,7 +18,7 @@ To run this script, you need Python 3.8 or above and the following packages:
 
 - `python-docx`
 - `ebooklib`
-- `requests`
+- `openai`
 - `python-dotenv`
 - `bs4`
 - `ebooklib`
@@ -30,7 +30,7 @@ To run this script, you need Python 3.8 or above and the following packages:
 1. Ensure all dependencies are installed.
 2. Set your environment variable for the OpenAI API key.
 3. Place your ebook files in a known directory.
-4. Run the script with the ebook file as an argument.
+4. Run the script with the path to the ebook file and a metadata dictionary with keys of 'title' and 'author' as arguments.
 
 ## Functions
 
@@ -72,3 +72,9 @@ This project is licensed by ProsePal LLC under the MIT license
 
 - **v1.0.2** (Release date: May 17, 2024)
   - added tests, fixex minor typos
+
+- **v1.1.0** (Release date: May 30, 2024)
+  - Change to abstract factory pattern
+
+- **v1.1.1** (Release date: May 31, 2024)
+  - Pulled current version of ebooklib from Github and folded it into library since package repo out of date

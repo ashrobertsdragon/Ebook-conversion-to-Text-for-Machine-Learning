@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,41 +8,31 @@ description = "Convert common book file types to text for machine learning"
 readme = "README.md"
 authors = [{name = "Ashlynn Antrobus", email = "ashlynn@prosepal.io"}]
 license = {text = "MIT"}
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Environment :: Console",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing"
+]
 requires-python = ">= 3.8"
 dependencies = [
-    "annotated-types>=0.4.0",
-    "anyio>3.5,5",
     "beautifulsoup4>=4.12.3",
-    "certifi>=2024.2.2",
-    "cffi>=1.12",
-    "colorama==0.4.6",
-    "cryptography==42.0.7",
-    "distro>=1.7,<2",
-    "EbookLib==0.18",
-    "h11>=0.13,<=0.15",
-    "httpcore>1",
-    "httpx>=0.23.0,<1",
-    "idna>2.8.0,<4",
-    "lxml>3.1.0",
-    "openai==1.30.1",
+    "openai>=1.30.1",
     "pillow>=10.2.0",
-    "pycparser==2.22",
-    "pydantic>1.9,3",
-    "pydantic_core==2.18.2",
     "python-docx>=1.1.0",
     "python-dotenv>=1.0.1",
-    "six==1.16.0",
-    "sniffio>=1.1.0",
-    "soupsieve>1.2",
-    "tqdm>=4.0.0",
-    "typing-extensions>=4.9.0",
-]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
+    "pdfminer.six>=0231228"
 ]
 dynamic = ["version"]
 
@@ -51,14 +41,16 @@ Respository = "https://github.com/ashrobertsdragon/Ebook-conversion-to-Text-for-
 
 [tool.ruff]
 line-length = 79
-exclude = [".git", "__pycache__",".venv"]
+force-exclude = true
+exclude = [".git", "__pycache__", ".venv", "ebooklib", "dist", "build", ".vscode", ".egg-info"]
 
 [tool.flake8]
 max_line_length = 79
-exclude = [".git", "__pycache__", ".venv"]
+exclude = [".git", "__pycache__", ".venv", "ebooklib", "dist", "build", ".vscode", ".egg-info"]
 
 [tool.isort]
 line_length = 79
 
-[mypy]
+[tool.mypy]
 disable_error_code = "import-untyped"
+exclude = "ebooklib"
