@@ -1,6 +1,6 @@
-import logging
 import os
 
+from . import logger
 from .docx_conversion import read_docx
 from .epub_conversion import read_epub
 from .file_handling import read_text_file, write_to_file
@@ -35,11 +35,11 @@ def convert_file(file_path: str, metadata: dict) -> None:
         book_content = read_docx(file_path, metadata)
     elif extension == "pdf":
         book_content = read_pdf(file_path, metadata)
-    elif extension == "txt" or extension == "text":
+    elif extension in ["txt", "text"]:
         book_content = read_text_file(file_path)
         book_content = parse_text_file(book_content)
     else:
-        logging.error(f"Invalid file type {extension} for file {file_path}")
+        logger.error(f"Invalid file type {extension} for file {file_path}")
 
     book_name = f"{base_name}.txt"
     book_path = os.path.join(folder, book_name)

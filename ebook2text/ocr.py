@@ -1,10 +1,12 @@
 import base64
-import logging
 import os
 
 from dotenv import load_dotenv
 from openai import OpenAI
 from openai.types.chat.chat_completion import ChatCompletion
+
+from . import logger
+from ._exceptions import NoResponseError
 
 load_dotenv()
 
@@ -79,7 +81,7 @@ def run_ocr(base64_images: list) -> str:
                 return run_ocr(base64_images)
             return clean_response(answer)
         else:
-            raise Exception("No response found")
+            raise NoResponseError("No response found")
     except Exception as e:
-        logging.exception("An error occured %s", str(e))
+        logger.exception("An error occurred %s", str(e))
         return ""

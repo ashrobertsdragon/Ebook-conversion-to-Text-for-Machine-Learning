@@ -1,9 +1,9 @@
 import base64
-import logging
 from typing import List, Tuple
 
 import docx
 
+from . import logger
 from ._namespaces import docx_ns_map
 from ._types import Document, Paragraph
 from .abstract_book import (
@@ -118,7 +118,7 @@ class DocxImageExtractor(ImageExtraction):
                 image_part = self.paragraph.part.related_parts[rId]
                 image_blobs.append(image_part.blob)
             except Exception as e:
-                logging.exception("Could not extract images %s", str(e))
+                logger.exception("Could not extract images %s", str(e))
         return image_blobs
 
 
@@ -137,14 +137,13 @@ class DocxTextExtractor(TextExtraction):
         """
         ocr_text = self._extract_image_text(paragraph)
         paragraph_text = paragraph.text.strip()
-        return ocr_text if ocr_text else paragraph_text
+        return ocr_text or paragraph_text
 
     def _extract_image_text(self, paragraph: Paragraph) -> str:
         """
         Extracts text from images within the paragraph using OCR.
         """
-        base64_images: list = self.converter.extract_images(paragraph)
-        if base64_images:
+        if base64_images := self.converter.extract_images(paragraph):
             return run_ocr(base64_images)
         return ""
 
@@ -207,12 +206,11 @@ class DocxChapterSplitter(ChapterSplit):
             bool: True if the paragraph contains a page break, False otherwise
         """
         p_element = paragraph._element
-        if p_element.pPr is not None:
-            if p_element.pPr.pageBreakBefore is not None:
-                # Explicit check required by python-dox library to avoid
-                # FutureWarning warning
-                return True
-        return False
+        if (
+            p_element.pPr is not None
+            and p_element.pPr.pageBreakBefore is not None
+        ):
+            return True
 
     def _check_index(self, index: int) -> bool:
         """
@@ -241,9 +239,7 @@ class DocxChapterSplitter(ChapterSplit):
             bool: True if the text is considered the start of a chapter, False
                 otherwise.
         """
-        if self._check_index(index):
-            return False
-        return is_chapter(text)
+        return False if self._check_index(index) else is_chapter(text)
 
     def _is_non_chapter(self, text: str, index: int) -> bool:
         """
@@ -302,8 +298,7 @@ class DocxChapterSplitter(ChapterSplit):
             Modifies the `self.pages` list by appending the non-empty page
             content.
         """
-        filtered_page: List[str] = list(filter(None, current_page))
-        if filtered_page:
+        if filtered_page := List(filter(None, current_page)):
             self.pages_list.extend(filtered_page)
 
 

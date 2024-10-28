@@ -1,5 +1,4 @@
 import base64
-import logging
 import re
 from io import BytesIO
 from typing import Any, List, Tuple, Union
@@ -11,6 +10,7 @@ from pdfminer.pdfparser import PDFParser
 from pdfminer.pdftypes import PDFStream
 from PIL import Image
 
+from . import logger
 from ._exceptions import ImageTooLargeError, ImageTooSmallError
 from ._types import LTChar, LTContainer, LTPage, LTText
 from .abstract_book import (
@@ -52,7 +52,7 @@ class PDFConverter(BookConversion):
         try:
             return list(extract_pages(file_path))
         except Exception as e:
-            logging.error(f"Error reading PDF file: {e}")
+            logger.error(f"Error reading PDF file: {e}")
             return []
 
     def extract_images(self, obj_nums: list) -> list:
@@ -114,7 +114,7 @@ class PDFChapterSplitter(ChapterSplit):
         super().__init__(book, metadata, converter)
         self.book: List[LTPage] = self.text_obj
 
-        # Without this, MyPy throws bad errror about missing method in parent
+        # Without this, MyPy throws bad error about missing method in parent
         self.converter: PDFConverter = converter
 
     def _process_text(self, page_text: str) -> str:
@@ -129,19 +129,16 @@ class PDFChapterSplitter(ChapterSplit):
         lines: List[str] = page_text.split("\n")
 
         for line in lines:
-            stripped = line.strip()
-            if stripped:
+            if line.strip():
                 cleaned = self.clean_text(line)
                 paragraph_lines.append(cleaned)
             elif paragraph_lines:
-                paragraph = self._process_paragraph(paragraph_lines)
-                if paragraph:
+                if paragraph := self._process_paragraph(paragraph_lines):
                     pages.append(paragraph)
                     paragraph_lines = []
 
         if paragraph_lines:
-            paragraph = self._process_paragraph(paragraph_lines)
-            if paragraph:
+            if paragraph := self._process_paragraph(paragraph_lines):
                 pages.append(paragraph)
 
         return "\n".join(pages)
@@ -198,7 +195,7 @@ class PDFChapterSplitter(ChapterSplit):
 
     def _remove_extra_separators(self, text: str) -> str:
         """
-        Remove blank lines and chapter seperators from the beginning of the
+        Remove blank lines and chapter separators from the beginning of the
         file if there are any using a regex pattern.
         """
         return re.sub(r"^(\*\*\*|\n)+", "", text)
@@ -252,9 +249,9 @@ class PDFTextExtractor(TextExtraction):
                     pass
         ocr_text = self._extract_image_text(obj_nums)
         return (
-            self._join_paragraph(pdf_text_list)
-            if not ocr_text
-            else ocr_text + "\n" + self._join_paragraph(pdf_text_list)
+            ocr_text + "\n" + self._join_paragraph(pdf_text_list)
+            if ocr_text
+            else self._join_paragraph(pdf_text_list)
         )
 
     def _process_element(self, element: Any) -> Tuple[str, Union[int, str]]:
@@ -392,7 +389,7 @@ class PDFImageExtractor(ImageExtraction):
             image.save(buffered, format="JPEG")
             return base64.b64encode(buffered.getvalue()).decode("utf-8")
         except Exception as e:
-            logging.exception(
+            logger.exception(
                 "Failed to create base64 encoded image due to %s", str(e)
             )
             return ""
@@ -417,32 +414,36 @@ class PDFImageExtractor(ImageExtraction):
         if attempt > 1:
             return ""
         try:
-            obj: object = resolve1(self.document.getobj(obj_num))
-            if obj and isinstance(obj, PDFStream):
-                width: int = obj["Width"]
-                height: int = obj["Height"]
-                if width < 5 or height < 5:
-                    raise ImageTooSmallError(
-                        "Image too small. Not target image"
+            if obj := resolve1(self.document.getobj(obj_num)):
+                if isinstance(obj, PDFStream):
+                    width, height, stream = self._parse_image_data(obj)
+                    return self._create_image_from_binary(
+                        stream, width, height
                     )
-                if width > 1000 and height > 1000:
-                    raise ImageTooLargeError("probably full page image")
-                stream = obj.get_data()
-                return self._create_image_from_binary(stream, width, height)
             else:
                 obj_typ = type(obj)
                 raise TypeError(
                     f"Invalid object. Received {obj_typ} instead of PDFStream"
                 )
         except TypeError as e:
-            logging.exception("TypeError: %s", str(e))
+            logger.exception("TypeError: %s", str(e))
             return ""
         except ImageTooSmallError as e:
-            logging.info(f"Issue: {e} with object: {obj_num}")
+            logger.info(f"Issue: {e} with object: {obj_num}")
             return self._get_image(obj_num + 1, attempt + 1)
         except ImageTooLargeError as e:
-            logging.info(f"Issue: {e} with object: {obj_num}")
+            logger.info(f"Issue: {e} with object: {obj_num}")
             return self._get_image(obj_num + 1, attempt + 1)
+
+    def _parse_image_data(self, obj) -> Tuple[int, int, bytes]:
+        width: int = obj["Width"]
+        height: int = obj["Height"]
+        if width < 5 or height < 5:
+            raise ImageTooSmallError("Image too small. Not target image")
+        if width > 1000 and height > 1000:
+            raise ImageTooLargeError("probably full page image")
+        stream = obj.get_data()
+        return width, height, stream
 
 
 def read_pdf(file_path: str, metadata: dict) -> str:
