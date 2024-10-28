@@ -1,8 +1,9 @@
 from typing import List
 
-import ebooklib
 from bs4 import BeautifulSoup
 from ebooklib import epub
+
+import ebook2text.ebooklib as ebooklib
 
 from ._types import EpubBook, EpubItem, ResultSet, Tag
 from .abstract_book import (
@@ -157,8 +158,7 @@ class EpubChapterSplitter(ChapterSplit[EpubBook]):
                 item.get_type() == ebooklib.ITEM_DOCUMENT
                 and not is_not_chapter(item.file_name.lower(), self.metadata)
             ):
-                chapter_text = self._process_chapter_text(item)
-                if chapter_text:
+                if chapter_text := self._process_chapter_text(item):
                     chapters.append(self.clean_text(chapter_text))
         return join_char.join(chapters)
 
