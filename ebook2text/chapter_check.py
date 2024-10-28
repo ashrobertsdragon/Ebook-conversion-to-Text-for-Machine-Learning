@@ -118,7 +118,7 @@ def word_to_num(number_string: str) -> int:
     """
     if not isinstance(number_string, str):
         raise TypeError("Must be a string")
-    if len(number_string) == 0:
+    if not number_string:
         raise ValueError("Must have a value")
 
     num_words = {
@@ -185,9 +185,7 @@ def is_roman_numeral(word: str) -> bool:
     try:
         roman_to_int(word)
         return True
-    except ValueError:
-        return False
-    except TypeError:
+    except (ValueError, TypeError):
         return False
 
 
