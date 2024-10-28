@@ -12,7 +12,7 @@ anyio==4.3.0
     #   openai
 beautifulsoup4==4.12.3
     # via -r requirements.in
-certifi==2024.2.2
+certifi==2024.7.4
     # via
     #   httpcore
     #   httpx
@@ -20,9 +20,7 @@ cffi==1.16.0
     # via cryptography
 charset-normalizer==3.3.2
     # via pdfminer-six
-colorama==0.4.6
-    # via tqdm
-cryptography==42.0.7
+cryptography==43.0.1
     # via pdfminer-six
 distro==1.9.0
     # via openai
@@ -37,9 +35,7 @@ idna==3.7
     #   anyio
     #   httpx
 lxml==5.2.2
-    # via
-    #   ebooklib
-    #   python-docx
+    # via python-docx
 openai==1.30.1
     # via -r requirements.in
 pdfminer-six==20231228
