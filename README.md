@@ -78,3 +78,6 @@ This project is licensed by ProsePal LLC under the MIT license
 
 - **v1.1.2** (Release date: May 31, 2024)
   - FIX: Put ebooklib in correct directory.
+
+- **v1.1.3** (Release date: October 27, 2024)
+  - FIX: Initialize logging
