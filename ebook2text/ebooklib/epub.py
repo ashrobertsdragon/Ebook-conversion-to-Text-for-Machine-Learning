@@ -23,15 +23,13 @@ import zipfile
 from collections import OrderedDict
 from typing import Generator, Union
 
-import six
-
 try:
     from urllib.parse import unquote
 except ImportError:
     from urllib import unquote
 
-import ebooklib
-from ebooklib.utils import (
+import ebook2text.ebooklib as ebooklib
+from ebook2text.ebooklib.utils import (
     get_pages_for_items,
     guess_type,
     parse_html_string,

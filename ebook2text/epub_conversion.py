@@ -1,9 +1,9 @@
 from typing import List
 
 from bs4 import BeautifulSoup
-from ebooklib import epub
 
 import ebook2text.ebooklib as ebooklib
+from ebook2text.ebooklib import epub
 
 from ._types import EpubBook, EpubItem, ResultSet, Tag
 from .abstract_book import (
