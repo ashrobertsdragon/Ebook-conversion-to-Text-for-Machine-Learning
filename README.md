@@ -3,7 +3,7 @@
 
 ## Overview
 
-This Python script provides functionality for converting various ebook file formats (EPUB, DOCX, PDF, TXT) into a standardized text format. The script processes each file, identifying chapters, and replaces chapter headers with asterisks. It also performs OCR (Optical Character Recognition) for image-based text using GPT-4o and standardizes the text by desmartenizing punctuation.
+This Python script provides functionality for converting various ebook file formats (EPUB, DOCX, PDF, TXT) into a standardized text format. The script processes each file, identifying chapters, and replaces chapter headers with asterisks. It also performs OCR (Optical Character Recognition) for image-based text using GPT-4o and standardizes the text by desmartening punctuation.
 
 ## Features
 
@@ -14,7 +14,7 @@ This Python script provides functionality for converting various ebook file form
 
 ## Requirements
 
-To run this script, you need Python 3.8 or above and the following packages:
+To run this script, you need Python 3.9 or above and the following packages:
 
 - `python-docx`
 - `openai`
@@ -57,8 +57,8 @@ This project is licensed by ProsePal LLC under the MIT license
 - **v0.3.0** (Release date: December 8, 2023)
   - Conversion of PDF files
 
-- **v0.3.1** (Release date: Januar 23, 2024)
-  - fixed concantation of text in pdf conversion
+- **v0.3.1** (Release date: January 23, 2024)
+  - fixed concatenation of text in pdf conversion
   - updated pillow version to secure version
 
 - **v1.0.0** (Release date: January 23, 2024)
@@ -68,7 +68,7 @@ This project is licensed by ProsePal LLC under the MIT license
   - setup.py and requirements.txt typo fixed
 
 - **v1.0.2** (Release date: May 17, 2024)
-  - added tests, fixex minor typos
+  - added tests, fixed minor typos
 
 - **v1.1.0** (Release date: May 30, 2024)
   - Change to abstract factory pattern
