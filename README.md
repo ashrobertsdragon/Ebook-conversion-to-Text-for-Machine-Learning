@@ -83,4 +83,7 @@ This project is licensed by ProsePal LLC under the MIT license
   - FIX: Initialize logging
 
 - **v1.1.4** (Release date: November 7, 2024)
+  - YANKED
+
+- **v1.1.5** (Release date: November 7, 2024)
   - FIX: Move logging to own module
