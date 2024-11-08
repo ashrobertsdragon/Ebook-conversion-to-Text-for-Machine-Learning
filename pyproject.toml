@@ -21,7 +21,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Text Processing"
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [
     "beautifulsoup4>=4.12.3",
     "openai>=1.54.3",
