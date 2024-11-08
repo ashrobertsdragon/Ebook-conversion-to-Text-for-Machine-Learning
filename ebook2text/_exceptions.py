@@ -22,3 +22,7 @@ class ImageTooLargeError(ImageSizeError):
     """
 
     pass
+
+
+class NoResponseError(Exception):
+    pass
