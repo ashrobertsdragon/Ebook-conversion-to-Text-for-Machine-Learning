@@ -9,6 +9,15 @@ from . import logger
 from ._exceptions import NoResponseError
 
 load_dotenv()
+api_key: str = os.getenv("OPENAI_API_KEY", "")
+CLIENT: OpenAI = OpenAI(api_key=api_key)
+
+GPT_REFUSALS = [
+    "I'm sorry",
+    "I apologize",
+    "I cannot",
+    "text-based",
+]
 
 
 def encode_image_file(image_path: str) -> str:
@@ -54,10 +63,17 @@ def create_payload(base64_images: list) -> list:
 
 def clean_response(answer: str) -> str:
     """Strip 'No text found' responses from AI OCR"""
-    return "" if answer == "No text found" else answer
+    if answer == "No text found":
+        return ""
+    # extra precaution for GPT-4o Mini refusal
+    elif any(refusal in answer for refusal in GPT_REFUSALS):
+        return ""
+    return answer
 
 
-def run_ocr(base64_images: list) -> str:
+def run_ocr(
+    base64_images: list, client: OpenAI = CLIENT, retry: int = 0
+) -> str:
     """
     Perform optical character recognition (OCR) on a list of base64-encoded
     images using the OpenAI API.
@@ -67,18 +83,22 @@ def run_ocr(base64_images: list) -> str:
 
     Returns str: The recognized text from the images.
     """
+    if not base64_images:
+        logger.info("No images to OCR")
+        return ""
     payload: list = create_payload(base64_images)
-    api_key: str = os.getenv("OPENAI_API_KEY", "")
-    client: OpenAI = OpenAI(api_key=api_key)
 
     try:
         response: ChatCompletion = client.chat.completions.create(
-            model="gpt-4o", messages=payload, max_tokens=10
+            model="gpt-4o-mini", messages=payload, max_tokens=10
         )
         if response.choices and response.choices[0].message.content:
             answer: str = response.choices[0].message.content
-            if answer.startswith("I'm sorry, but as an"):
-                return run_ocr(base64_images)
+            if any(refusal in answer for refusal in GPT_REFUSALS):
+                logger.error(f"GPT-4o Mini refusal: {answer}")
+                if retry > 2:
+                    raise NoResponseError("GPT-4o Mini refused: {answer}")
+                return run_ocr(base64_images, retry + 1)
             return clean_response(answer)
         else:
             raise NoResponseError("No response found")
