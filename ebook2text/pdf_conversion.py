@@ -4,7 +4,7 @@ from io import BytesIO
 from typing import Any, List, Tuple, Union
 
 from pdfminer.high_level import extract_pages
-from pdfminer.pdfdocument import PDFDocument
+from pdfminer.pdfdocument import PDFDocument, PDFSyntaxError
 from pdfminer.pdfinterp import resolve1
 from pdfminer.pdfparser import PDFParser
 from pdfminer.pdftypes import PDFStream
@@ -247,7 +247,11 @@ class PDFTextExtractor(TextExtraction):
                     pdf_text_list.append(str(obj_data))
                 case _:
                     pass
-        ocr_text = self._extract_image_text(obj_nums)
+        try:
+            ocr_text = self._extract_image_text(obj_nums)
+        except PDFSyntaxError as e:
+            logger.error(f"PDFMiner error parsing page: {e}")
+            ocr_text = ""
         return (
             ocr_text + "\n" + self._join_paragraph(pdf_text_list)
             if ocr_text
