@@ -87,3 +87,6 @@ This project is licensed by ProsePal LLC under the MIT license
 
 - **v1.1.5** (Release date: November 7, 2024)
   - FIX: Move logging to own module
+
+- **v1.1.6** (Release date: November 9, 2024)
+  - FIX: Catch PDFSyntaxError and empty image lists, small performance improvement to run_ocr
