@@ -20,7 +20,6 @@ To run this script, you need Python 3.9 or above and the following packages:
 - `openai`
 - `python-dotenv`
 - `bs4`
-- `ebooklib`
 - `pdfminer.six`
 - `pillow`
 
@@ -90,3 +89,6 @@ This project is licensed by ProsePal LLC under the MIT license
 
 - **v1.1.6** (Release date: November 9, 2024)
   - FIX: Catch PDFSyntaxError and empty image lists, small performance improvement to run_ocr
+
+- **v1.1.7** (Release date November 10, 2024)
+  - FIX: Line concatenation issue in PDFs
