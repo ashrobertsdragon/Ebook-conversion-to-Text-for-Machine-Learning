@@ -54,3 +54,12 @@ line_length = 79
 [tool.mypy]
 disable_error_code = "import-untyped"
 exclude = "ebooklib"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.3",
+]
