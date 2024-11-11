@@ -30,7 +30,7 @@ def create_image_role_list(base64_images: list) -> list:
         {
             "type": "image_url",
             "image_url": {
-                "url": f"data:image/jpeg;base64,{base64_image}",
+                "url": f"data:image/png;base64,{base64_image}",
                 "detail": "low",
             },
         }
@@ -98,7 +98,9 @@ def run_ocr(
                 logger.error(f"GPT-4o Mini refusal: {answer}")
                 if retry > 2:
                     raise NoResponseError("GPT-4o Mini refused: {answer}")
-                return run_ocr(base64_images, retry + 1)
+                return run_ocr(
+                    base64_images=base64_images, client=client, retry=retry + 1
+                )
             return clean_response(answer)
         else:
             raise NoResponseError("No response found")
