@@ -1,4 +1,5 @@
 import base64
+import itertools
 import re
 from io import BytesIO
 from typing import Any, List, Tuple, Union
@@ -21,6 +22,47 @@ from .abstract_book import (
 )
 from .chapter_check import is_chapter, is_not_chapter
 from .ocr import run_ocr
+
+
+def _expand_bits(data: bytes, bit_depth: int) -> bytes:
+    """Convert 2 or 4 bit data to 8 bit"""
+    if bit_depth in {8, 1}:
+        return data
+    elif bit_depth not in {2, 4}:
+        raise ValueError(f"Unsupported bit depth: {bit_depth}")
+
+    pixels_per_byte: int = 8 // bit_depth
+    mask: int = (1 << bit_depth) - 1
+
+    result = bytearray()
+    for byte, i in itertools.product(data, range(pixels_per_byte - 1, -1, -1)):
+        pixel = (byte >> (i * bit_depth)) & mask
+        pixel = (pixel * 255) // ((1 << bit_depth) - 1)
+        result.append(pixel)
+
+    return bytes(result)
+
+
+def _get_pillow_mode(bit_depth: int, color_space: str) -> str:
+    """
+    Get the Pillow mode based on bit depth and color space.
+
+    Args:
+        bit_depth (int): Bit depth of the image.
+        color_space (str): Color space of the image.
+
+    Returns:
+        str: Pillow mode.
+    """
+    match color_space:
+        case "DeviceGray":
+            return "1" if bit_depth == 1 else "L"
+        case "DeviceRGB":
+            return "RGB"
+        case "DeviceCMYK":
+            return "CMYK"
+        case _:
+            return "RGB"  # Default mode for unknown color spaces
 
 
 class PDFConverter(BookConversion):
@@ -305,7 +347,7 @@ class PDFTextExtractor(TextExtraction):
         return "".join(
             line + "\n"
             if self.converter.ends_with_punctuation(line)
-            else line + ""
+            else line + " "
             for line in paragraph
         )
 
@@ -325,7 +367,7 @@ class PDFImageExtractor(ImageExtraction):
     This class inherits from ImageExtraction and provides methods to process
     and extract images from PDF files based on the provided object numbers. It
     includes functionality to read the PDF file, retrieve image data, convert
-    binary image data into base64-encoded JPEG strings, and handle exceptions
+    binary image data into base64-encoded PNG strings, and handle exceptions
     related to image size.
 
     Methods:
@@ -370,7 +412,7 @@ class PDFImageExtractor(ImageExtraction):
         return [image for image in base64_images if image]
 
     def _create_image_from_binary(
-        self, stream: bytes, width: int, height: int
+        self, stream: bytes, width: int, height: int, mode: str
     ) -> str:
         """
         Convert binary image data into a base64-encoded JPEG string.
@@ -381,16 +423,22 @@ class PDFImageExtractor(ImageExtraction):
             height (int): The height of the image in pixels.
 
         Returns:
-            str: A base64-encoded string representing the JPEG image.
+            str: A base64-encoded string representing the PNG image.
 
         Raises:
             Exception: If there is an error in processing the image data.
         """
         try:
-            image = Image.frombytes("1", (width, height), stream)
-            image = image.convert("L")
+            image = Image.frombytes(mode, (width, height), stream)
+            image = (
+                image.convert("L")
+                if mode == "1"
+                else image.convert("RGB")
+                if mode == "CMYK"
+                else image
+            )
             buffered = BytesIO()
-            image.save(buffered, format="JPEG")
+            image.save(buffered, format="PNG")
             return base64.b64encode(buffered.getvalue()).decode("utf-8")
         except Exception as e:
             logger.exception(
@@ -420,9 +468,9 @@ class PDFImageExtractor(ImageExtraction):
         try:
             if obj := resolve1(self.document.getobj(obj_num)):
                 if isinstance(obj, PDFStream):
-                    width, height, stream = self._parse_image_data(obj)
+                    width, height, mode, stream = self._parse_image_data(obj)
                     return self._create_image_from_binary(
-                        stream, width, height
+                        stream, width, height, mode
                     )
             else:
                 obj_typ = type(obj)
@@ -439,15 +487,26 @@ class PDFImageExtractor(ImageExtraction):
             logger.info(f"Issue: {e} with object: {obj_num}")
             return self._get_image(obj_num + 1, attempt + 1)
 
-    def _parse_image_data(self, obj) -> Tuple[int, int, bytes]:
-        width: int = obj["Width"]
-        height: int = obj["Height"]
+    def _parse_image_data(self, obj) -> Tuple[int, int, str, bytes]:
+        width: int = obj.get("Width", 0)
+        height: int = obj.get("Height", 0)
         if width < 5 or height < 5:
-            raise ImageTooSmallError("Image too small. Not target image")
+            raise ImageTooSmallError(
+                "Image too small. Get soft mask from next object"
+            )
         if width > 1000 and height > 1000:
             raise ImageTooLargeError("probably full page image")
-        stream = obj.get_data()
-        return width, height, stream
+        mode, bit_depth = self._extract_color_data(obj)
+        stream = _expand_bits(obj.get_data(), bit_depth)
+        return width, height, mode, stream
+
+    def _extract_color_data(self, obj) -> Tuple[str, int]:
+        bit_depth: int = obj.get("BitsPerComponent", 1)
+        color_space: str = obj.get("ColorSpace", "DeviceGray")
+        if isinstance(color_space, list):
+            color_space = color_space[0]
+        mode: str = _get_pillow_mode(bit_depth, color_space)
+        return mode, bit_depth
 
 
 def read_pdf(file_path: str, metadata: dict) -> str:
