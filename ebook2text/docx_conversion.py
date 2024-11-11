@@ -74,6 +74,9 @@ class DocxImageExtractor(ImageExtraction):
     A class dedicated to extracting images from docx Paragraph objects.
     """
 
+    def __init__(self):
+        self.paragraph: Paragraph = None
+
     def extract_images(self, paragraph: Paragraph) -> List[str]:
         """
         Extracts and converts images found in the paragraph into
@@ -117,8 +120,8 @@ class DocxImageExtractor(ImageExtraction):
                 rId = blip.attrib[f"{{{namespace['r']}}}embed"]
                 image_part = self.paragraph.part.related_parts[rId]
                 image_blobs.append(image_part.blob)
-            except Exception as e:
-                logger.exception("Could not extract images %s", str(e))
+            except (KeyError, ValueError, AttributeError) as e:
+                logger.exception(f"Corrupted image data: {str(e)}")
         return image_blobs
 
 
@@ -133,7 +136,13 @@ class DocxTextExtractor(TextExtraction):
     def extract_text(self, paragraph: Paragraph) -> str:
         """
         Extracts the text content from the paragraph, performs OCR on any
-        images present, and returns the combined text.
+        images present, and returns whichever is not empty.
+
+        Args:
+            paragraph: The Paragraph object containing the text and formatting.
+
+        Returns:
+            str: The extracted and processed text.
         """
         ocr_text = self._extract_image_text(paragraph)
         paragraph_text = paragraph.text.strip()
