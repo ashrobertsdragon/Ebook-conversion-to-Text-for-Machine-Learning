@@ -12,7 +12,7 @@ class LoggerProxy:
 
     def _add_basic_logger(self) -> None:
         logging.basicConfig()
-        self._logger = logging.getLogger("supasaas")
+        self._logger = logging.getLogger("ebook2text")
 
     def __getattr__(self, name: str) -> Callable:
         if self._logger is None:
