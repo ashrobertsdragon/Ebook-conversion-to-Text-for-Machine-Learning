@@ -67,7 +67,7 @@ class PDFConverter(BookConversion):
         return line.split("\n")
 
     def add_line_to_page(self, line: str) -> None:
-        self._page.append(line + "\n") if self.ends_with_punctuation(
+        self._page.append(line.rstrip() + "\n") if self.ends_with_punctuation(
             line
         ) else self._page.append(line)
 
@@ -116,7 +116,7 @@ class PDFConverter(BookConversion):
                     self._page.append(self.chapter_separator)
             self.add_line_to_page(line)
         # after all lines run through `split_line`
-        return "" if self.is_title_page(page_lines) else "".join(self._page)
+        return "".join(self._page)
 
     @staticmethod
     def remove_extra_whitespace(text: str) -> str:
@@ -144,9 +144,14 @@ class PDFConverter(BookConversion):
             output (str): The parsed text to be written to the file.
             file_path (Path): The path to the output file.
         """
+        if not content.strip():
+            return
+        cleaned_content = self._clean_before_write(content, file_path)
         with file_path.open("a", encoding="utf-8") as f:
-            f.write(self._clean_before_write(content, file_path))
+            f.write(cleaned_content)
 
     def return_string(self, generator: Generator[str, None, None]) -> str:
         """Return the parsed text as a string."""
-        return "".join(generator)
+        return "".join(line for line in generator if line.strip()).lstrip(
+            self.chapter_separator
+        )
