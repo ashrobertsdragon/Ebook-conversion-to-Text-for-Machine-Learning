@@ -5,6 +5,7 @@ from pdfminer.pdfdocument import PDFSyntaxError
 from ebook2text import logger
 from ebook2text._types import LTChar, LTContainer, LTPage, LTText
 from ebook2text.abstract_book import ImageExtraction, TextExtraction
+from ebook2text.ocr import run_ocr
 
 
 class PDFTextExtractor(TextExtraction):
@@ -121,6 +122,5 @@ class PDFTextExtractor(TextExtraction):
 
     def _extract_image_text(self, image_obj_nums: List[int]) -> str:
         """Collect list of Base64 encoded images and run them through OCR"""
-        return "Chapter"
-        # base64_images = self.converter.extract_images(image_obj_nums)
-        # return run_ocr(base64_images)
+        base64_images = self.image_extractor.extract_images(image_obj_nums)
+        return run_ocr(base64_images)
