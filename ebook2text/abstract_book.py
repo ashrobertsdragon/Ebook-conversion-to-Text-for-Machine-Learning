@@ -1,32 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Generic, List, TypeVar
+from pathlib import Path
+from typing import Generator, Generic, List, TypeVar, Union
 
-from .text_conversion import desmarten_text
+from ebook2text.text_utilities import desmarten_text
 
 T = TypeVar("T")
-
-
-class BookConversion(ABC, Generic[T]):
-    def __init__(self, file_path: str, metadata: dict):
-        self.file_path: str = file_path
-        self.metadata: dict = metadata
-        self.book = self._read_file(file_path)
-
-    @abstractmethod
-    def _read_file(self, file_path: str) -> T:
-        raise NotImplementedError("Must be implemented in child class")
-
-    @abstractmethod
-    def split_chapters(self) -> str:
-        raise NotImplementedError("Must be implemented in child class")
-
-    @abstractmethod
-    def extract_text(self, T) -> str:
-        raise NotImplementedError("Must be implemented in child class")
-
-    @abstractmethod
-    def extract_images(self, T) -> List[str]:
-        raise NotImplementedError("Must be implemented in child class")
 
 
 class ImageExtraction(ABC, Generic[T]):
@@ -36,8 +14,11 @@ class ImageExtraction(ABC, Generic[T]):
 
 
 class TextExtraction(ABC, Generic[T]):
+    def __init__(self, image_extractor: ImageExtraction):
+        self.image_extractor = image_extractor
+
     @abstractmethod
-    def extract_text(self, T) -> str:
+    def extract_text(self, T) -> Union[str, List[str]]:
         raise NotImplementedError("Must be implemented in child class")
 
     @abstractmethod
@@ -45,20 +26,23 @@ class TextExtraction(ABC, Generic[T]):
         raise NotImplementedError("Must be implemented in child class")
 
 
-class ChapterSplit(ABC, Generic[T]):
-    @abstractmethod
+class BookConversion(ABC, Generic[T]):
     def __init__(
-        self, text_obj: T, metadata: dict, converter: BookConversion
-    ) -> None:
-        self.text_obj = text_obj
-        self.metadata = metadata
-        self.converter = converter
-
-        self.MAX_LINES_TO_CHECK: int = 3
+        self, file_path: Path, metadata: dict, text_extractor: TextExtraction
+    ):
+        self.file_path: Path = file_path
+        self.metadata: dict = metadata
+        self.text_extractor = text_extractor
+        self._objects = self._read_file(file_path)
+        self.MAX_LINES_TO_CHECK: int = 6
         self.CHAPTER_SEPARATOR: str = "***"
 
     @abstractmethod
-    def split_chapters(self) -> str:
+    def _read_file(self, file_path: str) -> Generator[T, None, None]:
+        raise NotImplementedError("Must be implemented in child class")
+
+    @abstractmethod
+    def parse_file(self) -> str:
         raise NotImplementedError("Must be implemented in child class")
 
     def clean_text(self, text: str) -> str:
