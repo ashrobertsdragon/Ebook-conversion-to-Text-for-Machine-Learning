@@ -1,12 +1,12 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from docx import Document
+from docx import Document  # constructor
+from docx.api import DocumentObject  # type
 from docx.oxml import parse_xml
 
 from ebook2text._namespaces import docx_ns_map
 from ebook2text.docx_conversion import (
-    DocxChapterSplitter,
     DocxConverter,
     DocxImageExtractor,
     DocxTextExtractor,
@@ -26,18 +26,6 @@ def docx_file_with_image(test_files_dir):
     """Fixture to provide path to test docx file with image for testing."""
     doc_path = test_files_dir / "test_docx_with_image.docx"
     return str(doc_path)
-
-
-@pytest.fixture
-def docx_converter(docx_file, metadata):
-    """Fixture to initialize DocxConverter with a test DOCX file and metadata."""
-    return DocxConverter(docx_file, metadata)
-
-
-@pytest.fixture
-def docx_converter_with_image(docx_file_with_image, metadata):
-    """Fixture to initialize DocxConverter with a test DOCX file with image and metadata."""
-    return DocxConverter(docx_file_with_image, metadata)
 
 
 @pytest.fixture
@@ -76,10 +64,38 @@ def expected_base64_image():
     return "your_base64_encoded_string_here"
 
 
+@pytest.fixture
+def docx_text_extractor(docx_image_extractor):
+    return DocxTextExtractor(docx_image_extractor)
+
+
+@pytest.fixture
+def docx_text_extractor_with_image(
+    docx_text_extractor, docx_paragraph_with_image
+):
+    return DocxTextExtractor(docx_paragraph_with_image)
+
+
+@pytest.fixture
+def docx_converter(docx_file, metadata, docx_text_extractor):
+    """Fixture to initialize DocxConverter with a test DOCX file and metadata."""
+    return DocxConverter(docx_file, metadata, docx_text_extractor)
+
+
+@pytest.fixture
+def docx_converter_with_image(
+    docx_file_with_image, metadata, docx_text_extractor_with_image
+):
+    """Fixture to initialize DocxConverter with a test DOCX file with image and metadata."""
+    return DocxConverter(
+        docx_file_with_image, metadata, docx_text_extractor_with_image
+    )
+
+
 def test_read_file(docx_converter):
     """Test that a DOCX file is read and parsed correctly."""
     doc = docx_converter._read_file(docx_converter.file_path)
-    assert isinstance(doc, Document)
+    assert isinstance(doc, DocumentObject)
     assert len(doc.paragraphs) > 0
 
 
@@ -275,27 +291,3 @@ def test_extract_images_with_mock_ocr(docx_converter_with_image, monkeypatch):
     extracted_text = text_extractor.extract_text(paragraphs[0])
 
     assert extracted_text == "Mocked OCR Text"
-
-
-def test_chapter_splitter(docx_converter):
-    """Test the chapter splitting logic for correct chapter organization."""
-    paragraphs = docx_converter.extract_paragraphs()
-    chapter_splitter = DocxChapterSplitter(
-        paragraphs, docx_converter.metadata, docx_converter
-    )
-    structured_text = chapter_splitter.split_chapters()
-
-    assert "Chapter 1" in structured_text
-    assert "Chapter 2" in structured_text
-
-
-def test_check_index(docx_converter):
-    """Test the index check limit in chapter splitter."""
-    chapter_splitter = DocxChapterSplitter(
-        [], docx_converter.metadata, docx_converter
-    )
-    assert chapter_splitter._check_index(100) is False
-    assert (
-        chapter_splitter._check_index(chapter_splitter.MAX_LINES_TO_CHECK)
-        is True
-    )

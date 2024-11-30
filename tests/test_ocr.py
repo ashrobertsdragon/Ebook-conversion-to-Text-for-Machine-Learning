@@ -67,7 +67,7 @@ def test_create_payload(base64_images):
     assert payload[0]["content"][1]["type"] == "image_url"
     assert (
         payload[0]["content"][1]["image_url"]["url"]
-        == f"data:image/jpeg;base64,{base64_images[0]}"
+        == f"data:image/png;base64,{base64_images[0]}"
     )
 
 

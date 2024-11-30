@@ -2,7 +2,6 @@ import pytest
 from bs4 import BeautifulSoup
 
 from ebook2text.epub_conversion import (
-    EpubChapterSplitter,
     EpubConverter,
     EpubImageExtractor,
     EpubTextExtractor,
@@ -20,16 +19,6 @@ def epub_file_with_images(test_files_dir):
 
 
 @pytest.fixture
-def epub_converter(epub_file, sample_metadata):
-    return EpubConverter(epub_file, sample_metadata)
-
-
-@pytest.fixture
-def epub_converter_with_images(epub_file_with_images, sample_metadata):
-    return EpubConverter(epub_file_with_images, sample_metadata)
-
-
-@pytest.fixture
 def sample_element_with_text():
     html = "<div><p>This is a sample paragraph.</p></div>"
     soup = BeautifulSoup(html, "html.parser")
@@ -41,6 +30,30 @@ def sample_element_with_image():
     html = '<img src="chapter_one.jpg"/>'
     soup = BeautifulSoup(html, "html.parser")
     return soup.find("img")
+
+
+@pytest.fixture
+def epub_image_extractor():
+    return EpubImageExtractor()
+
+
+@pytest.fixture
+def epub_text_extractor(epub_image_extractor):
+    return EpubTextExtractor(epub_image_extractor)
+
+
+@pytest.fixture
+def epub_converter(epub_file, sample_metadata, epub_text_extractor):
+    return EpubConverter(epub_file, sample_metadata, epub_text_extractor)
+
+
+@pytest.fixture
+def epub_converter_with_images(
+    epub_file_with_images, sample_metadata, epub_text_extractor
+):
+    return EpubConverter(
+        epub_file_with_images, sample_metadata, epub_text_extractor
+    )
 
 
 def test_split_chapters(epub_converter):
@@ -84,29 +97,3 @@ def test_extract_images_with_image_element(
     assert isinstance(images, list)
     assert len(images) > 0
     assert all(isinstance(img, str) for img in images)
-
-
-def test_chapter_splitter(epub_converter, sample_metadata):
-    splitter = EpubChapterSplitter(
-        epub_converter.book,
-        sample_metadata,
-        epub_converter,
-    )
-    chapters = splitter.split_chapters()
-
-    assert isinstance(chapters, str)
-    assert "***" in chapters
-
-
-def test_chapter_splitter_with_images(
-    epub_converter_with_images, sample_metadata
-):
-    splitter = EpubChapterSplitter(
-        epub_converter_with_images.book,
-        sample_metadata,
-        epub_converter_with_images,
-    )
-    chapters = splitter.split_chapters()
-
-    assert isinstance(chapters, str)
-    assert "***" in chapters
