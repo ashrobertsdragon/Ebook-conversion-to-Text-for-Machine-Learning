@@ -1,18 +1,30 @@
-from epub_chapter_splitter import EpubChapterSplitter
-from epub_converter import EpubConverter
-from epub_image_extractor import EpubImageExtractor
-from epub_text_extractor import EpubTextExtractor
+from pathlib import Path
+from typing import Generator
+
+from ebook2text.epub_conversion.epub_converter import EpubConverter
+from ebook2text.epub_conversion.epub_image_extractor import EpubImageExtractor
+from ebook2text.epub_conversion.epub_text_extractor import EpubTextExtractor
 
 __all__ = [
-    "EpubChapterSplitter",
     "EpubConverter",
     "EpubImageExtractor",
     "EpubTextExtractor",
-    "read_epub",
+    "convert_epub",
+    "_initialize_epub_converter",
 ]
 
 
-def read_epub(file_path: str, metadata: dict) -> str:
+def _initialize_epub_converter(
+    file_path: Path, metadata: dict
+) -> EpubConverter:
+    image_extractor = EpubImageExtractor()
+    text_extractor = EpubTextExtractor(image_extractor)
+    return EpubConverter(file_path, metadata, text_extractor)
+
+
+def convert_epub(
+    file_path: Path, metadata: dict
+) -> Generator[str, None, None]:
     """
     Reads an EPUB file and splits it into chapters.
 
@@ -24,5 +36,7 @@ def read_epub(file_path: str, metadata: dict) -> str:
     Returns:
         str: The cleaned text of the chapters separated by '***'.
     """
-    epub_converter = EpubConverter(file_path, metadata)
-    return epub_converter.split_chapters()
+    image_extractor = EpubImageExtractor()
+    text_extractor = EpubTextExtractor(image_extractor)
+    epub_converter = EpubConverter(file_path, metadata, text_extractor)
+    yield from epub_converter.parse_file()

@@ -1,6 +1,5 @@
 from ebook2text._types import Tag
-from ebook2text.abstract_book import TextExtraction
-from ebook2text.epub_conversion import EpubConverter
+from ebook2text.abstract_book import ImageExtraction, TextExtraction
 from ebook2text.ocr import run_ocr
 
 
@@ -9,8 +8,8 @@ class EpubTextExtractor(TextExtraction):
     Extracts text from EPUB elements, handling image OCR.
     """
 
-    def __init__(self, converter: EpubConverter):
-        self.converter = converter
+    def __init__(self, image_extractor: ImageExtraction):
+        self.image_extractor = image_extractor
 
     def extract_text(self, element: Tag) -> str:
         """
@@ -29,7 +28,7 @@ class EpubTextExtractor(TextExtraction):
             return self._extract_text(element)
 
     def _extract_image_text(self, element: Tag) -> str:
-        base64_images: list = self.converter.extract_images(element)
+        base64_images: list = self.image_extractor.extract_images(element)
         return run_ocr(base64_images)
 
     def _extract_text(self, element: Tag) -> str:
