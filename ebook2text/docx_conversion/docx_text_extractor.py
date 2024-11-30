@@ -26,7 +26,7 @@ class DocxTextExtractor(TextExtraction):
         paragraph_text = paragraph.text.strip()
         return ocr_text or paragraph_text
 
-    def extract_image_text(self, paragraph: Paragraph) -> str:
+    def _extract_image_text(self, paragraph: Paragraph) -> str:
         """
         Extracts text from images within the paragraph using OCR.
         """
