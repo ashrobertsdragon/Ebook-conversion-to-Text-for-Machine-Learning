@@ -131,14 +131,12 @@ class PDFConverter(BookConversion):
             self._page = []
             yield self.remove_extra_whitespace(page_text)
 
-    def _clean_output_before_write(self, output: str, file_path: Path) -> str:
+    def _clean_before_write(self, text: str, file_path: Path) -> str:
         return (
-            output
-            if file_path.exists()
-            else output.lstrip(self.chapter_separator)
+            text if file_path.exists() else text.lstrip(self.chapter_separator)
         )
 
-    def write_text(self, output: str, file_path: Path) -> None:
+    def write_text(self, content: str, file_path: Path) -> None:
         """
         Write the parsed text to a file.
 
@@ -147,8 +145,8 @@ class PDFConverter(BookConversion):
             file_path (Path): The path to the output file.
         """
         with file_path.open("a", encoding="utf-8") as f:
-            f.write(self._clean_output_before_write(output, file_path))
+            f.write(self._clean_before_write(content, file_path))
 
-    def return_string(self, output: Generator[str, None, None]) -> str:
+    def return_string(self, generator: Generator[str, None, None]) -> str:
         """Return the parsed text as a string."""
-        return "".join(output)
+        return "".join(generator)

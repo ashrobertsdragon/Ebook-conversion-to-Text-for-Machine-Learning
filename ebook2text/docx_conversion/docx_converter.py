@@ -73,9 +73,7 @@ class DocxConverter(BookConversion):
         if current_page:
             yield "\n".join(current_page)
 
-    def write_text(
-        self, output: Generator[str, None, None], file_path: Path
-    ) -> None:
+    def write_text(self, content: str, file_path: Path) -> None:
         """
         Write the parsed text to a file.
 
@@ -83,12 +81,11 @@ class DocxConverter(BookConversion):
             text (str): The parsed text to be written to the file.
         """
         with file_path.open("a", encoding="utf-8") as f:
-            for line in output:
-                f.write(line + "\n")
+            f.write(content + "\n")
 
-    def return_string(self, output: Generator[str, None, None]) -> str:
+    def return_string(self, generator: Generator[str, None, None]) -> str:
         """Return the parsed text as a string."""
-        return "\n".join(output)
+        return "\n".join(generator)
 
     def _contains_page_break(self, paragraph: Paragraph) -> bool:
         """

@@ -80,9 +80,7 @@ class EpubConverter(BookConversion):
                 if chapter_text := self._process_chapter_text(item):
                     yield self.clean_text(chapter_text)
 
-    def write_text(
-        self, output: Generator[str, None, None], file_path: Path
-    ) -> None:
+    def write_text(self, content: str, file_path: Path) -> None:
         """
         Write the parsed text to a file.
 
@@ -90,9 +88,8 @@ class EpubConverter(BookConversion):
             text (str): The parsed text to be written to the file.
         """
         with file_path.open("a", encoding="utf-8") as f:
-            for line in output:
-                f.write(self.chapter_separator + line)
+            f.write(self.chapter_separator + content)
 
-    def return_string(self, output: Generator[str, None, None]) -> str:
+    def return_string(self, generator: Generator[str, None, None]) -> str:
         """Return the parsed text as a string."""
-        return f"{self.chapter_separator}".join(output)
+        return f"{self.chapter_separator}".join(generator)

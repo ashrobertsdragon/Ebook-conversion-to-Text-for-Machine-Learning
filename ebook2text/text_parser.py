@@ -12,33 +12,25 @@ class TextParser:
 
     def read_line(self) -> Generator[str, None, None]:
         with self.file_path.open("r", encoding="utf-8") as f:
-            while True:
-                if line := f.readline():
-                    yield line
-                else:
-                    break
+            yield from f
 
-    def parse_file(
-        self, line: Generator[str, None, None]
-    ) -> Generator[str, None, None]:
+    def parse_file(self) -> Generator[str, None, None]:
         """
         Parses the book lines, replacing chapter headers with asterisks and
         applying text standardization.
-        Args:
-            book_content: The entire content of the book as a string.
-        Returns the processed book content as a string.
+
+        Yields a line-by-line of the processed book content as a string.
         """
-        parsed_line = (
-            self.chapter_separator
-            if is_chapter(line)
-            else desmarten_text(line)
-        )
+        for line in self.read_line():
+            parsed_line = (
+                self.chapter_separator
+                if is_chapter(line)
+                else desmarten_text(line)
+            )
 
-        yield clean_text(parsed_line)
+            yield clean_text(parsed_line)
 
-    def write_text(
-        self, output: Generator[str, None, None], file_path: Path
-    ) -> None:
+    def write_text(self, content: str, file_path: Path) -> None:
         """
         Write the parsed text to a file.
 
@@ -46,9 +38,8 @@ class TextParser:
             text (str): The parsed text to be written to the file.
         """
         with file_path.open("a", encoding="utf-8") as f:
-            for line in output:
-                f.write(line + "\n")
+            f.write(content + "\n")
 
-    def return_string(self, output: Generator[str, None, None]) -> str:
+    def return_string(self, generator: Generator[str, None, None]) -> str:
         """Return the parsed text as a string."""
-        return "\n".join(output)
+        return "\n".join(generator)
