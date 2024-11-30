@@ -1,8 +1,7 @@
-from ebook2text.text_conversion import (
+from ebook2text.text_utilities import (
     clean_chapter_breaks,
     clean_text,
     desmarten_text,
-    parse_text_file,
     remove_leading_chapter_breaks,
     remove_whitespace,
 )
@@ -101,39 +100,3 @@ class TestRemoveWhitespace:
     def test_remove_whitespace_no_extra_whitespace(self):
         text = "This is a normal sentence."
         assert remove_whitespace(text) == text
-
-
-class TestParseTextFile:
-    CHAPTER_BREAK = "***\n"
-
-    def test_parse_text_file_with_chapters(self):
-        book_content = (
-            "Chapter 1\n"
-            "Some text.\n"
-            "Chapter 2\n"
-            "More ‘text’.\n"  # Includes smart punctuation
-        )
-
-        expected = f"{self.CHAPTER_BREAK}Some text.\n{self.CHAPTER_BREAK}More 'text'.\n"
-
-        assert parse_text_file(book_content) == expected
-
-    def test_parse_text_file_no_chapters(self):
-        book_content = (
-            "Some text.\n" "More ‘text’.\n"  # Includes smart punctuation
-        )
-        expected = "Some text.\nMore 'text'.\n"
-        assert parse_text_file(book_content) == expected
-
-    def test_parse_text_file_empty(self):
-        assert parse_text_file("") == ""
-
-    def test_parse_text_file_with_roman_chapter(self):
-        book_content = "I\nSome text."
-        expected = f"{self.CHAPTER_BREAK}Some text."
-        assert parse_text_file(book_content) == expected
-
-    def test_parse_text_file_with_spelled_chapter(self):
-        book_content = "One\nSome text."
-        expected = f"{self.CHAPTER_BREAK}Some text."
-        assert parse_text_file(book_content) == expected
