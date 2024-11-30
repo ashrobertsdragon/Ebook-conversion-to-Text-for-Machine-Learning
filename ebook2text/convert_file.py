@@ -1,46 +1,56 @@
-import os
+from pathlib import Path
+from typing import Union
 
-from . import logger
-from .docx_conversion import read_docx
-from .epub_conversion import read_epub
-from .file_handling import read_text_file, write_to_file
-from .pdf_conversion import read_pdf
-from .text_conversion import parse_text_file
+from ebook2text.abstract_book import BookConversion
+from ebook2text.docx_conversion import _initialize_docx_converter
+from ebook2text.epub_conversion import _initialize_epub_converter
+from ebook2text.pdf_conversion import _initialize_pdf_converter
+from ebook2text.text_parser import TextParser
 
 
-def convert_file(file_path: str, metadata: dict) -> None:
+def _initialize_converter(
+    file_path: Path, metadata: dict, extension: str
+) -> Union[BookConversion, TextParser]:
+    if extension == ".epub":
+        return _initialize_epub_converter(file_path, metadata)
+    elif extension == ".pdf":
+        return _initialize_pdf_converter(file_path, metadata)
+    elif extension == ".docx":
+        return _initialize_docx_converter(file_path, metadata)
+    elif extension in {"txt", "text"}:
+        return TextParser(file_path)
+    raise ValueError(f"Unsupported file type: {extension}")
+
+
+def _parse_file_path(file_path: Path) -> Path:
+    folder = file_path.parent
+    book_name = (
+        file_path.stem.replace(" ", "_").replace("-", "_").replace(".", "_")
+    )
+    almost_path = folder / book_name
+    return almost_path.with_suffix(".txt")
+
+
+def convert_file(
+    file_path: Path,
+    metadata: dict,
+    *,
+    save_file: bool = True,
+    save_path: Union[Path, None] = None,
+) -> Union[str, None]:
     """
     Converts a book to a text file with 3 asterisks for chapter breaks
     Args:
         book_name: Name of the book.
         folder_name: Name of the folder containing the book.
     """
-
-    book_content = ""
-    folder, book_file = os.path.split(file_path)
-
-    book_file = book_file.replace(" ", "_")
-    book_file = book_file.replace("-", "_")
-    filename_list = book_file.split(".")
-
-    if len(filename_list) > 1:
-        base_name = "_".join(filename_list[:-1])
-    else:
-        base_name = filename_list[0]
-    extension = filename_list[-1].lower()
-
-    if extension == "epub":
-        book_content = read_epub(file_path, metadata)
-    elif extension == "docx":
-        book_content = read_docx(file_path, metadata)
-    elif extension == "pdf":
-        book_content = read_pdf(file_path, metadata)
-    elif extension in ["txt", "text"]:
-        book_content = read_text_file(file_path)
-        book_content = parse_text_file(book_content)
-    else:
-        logger.error(f"Invalid file type {extension} for file {file_path}")
-
-    book_name = f"{base_name}.txt"
-    book_path = os.path.join(folder, book_name)
-    write_to_file(book_content, book_path)
+    extension = file_path.suffix.lower()
+    converter = _initialize_converter(file_path, metadata, extension)
+    for content in converter.parse_file():
+        if save_file:
+            path = save_path or _parse_file_path(file_path)
+            converter.write_text(content, path)
+            string_output = None
+        else:
+            string_output = converter.return_string(content)
+    return string_output
