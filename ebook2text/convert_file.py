@@ -11,6 +11,20 @@ from ebook2text.text_parser import TextParser
 def _initialize_converter(
     file_path: Path, metadata: dict, extension: str
 ) -> Union[BookConversion, TextParser]:
+    """
+    Initialize the appropriate converter based on the file extension.
+
+    Args:
+        file_path (Path): The path to the book file.
+        metadata (dict): Dictionary with title and author name.
+        extension (str): The file extension of the book file.
+
+    Returns:
+        Union[BookConversion, TextParser]: The initialized converter.
+
+    Raises:
+        ValueError: If the file type is not supported.
+    """
     if extension == ".epub":
         return _initialize_epub_converter(file_path, metadata)
     elif extension == ".pdf":
@@ -23,6 +37,7 @@ def _initialize_converter(
 
 
 def _parse_file_path(file_path: Path) -> Path:
+    """Create the text file name from the book file name."""
     folder = file_path.parent
     book_name = (
         file_path.stem.replace(" ", "_").replace("-", "_").replace(".", "_")
@@ -41,16 +56,24 @@ def convert_file(
     """
     Converts a book to a text file with 3 asterisks for chapter breaks
     Args:
-        book_name: Name of the book.
-        folder_name: Name of the folder containing the book.
+        file_path: Path to the book file.
+        metadata: Dictionary with title and author name.
+        save_file: Boolean to save the file or not.
+        save_path: (Optional) Path to save the file to.
+
+    Returns:
+        None if save_file is False, else returns the parsed text as a string.
+
+    Raises:
+        ValueError: If the file type is not supported (inherited from
+            _initialize_converter).
     """
     extension = file_path.suffix.lower()
     converter = _initialize_converter(file_path, metadata, extension)
+    if not save_file:
+        return converter.return_string(converter.parse_file())
+
+    save_path = save_path or _parse_file_path(file_path)
     for content in converter.parse_file():
-        if save_file:
-            path = save_path or _parse_file_path(file_path)
-            converter.write_text(content, path)
-            string_output = None
-        else:
-            string_output = converter.return_string(content)
-    return string_output
+        if content:
+            converter.write_text(content, save_path)
