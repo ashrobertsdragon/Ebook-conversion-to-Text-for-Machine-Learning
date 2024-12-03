@@ -4,10 +4,12 @@ from typing import Generator
 from bs4 import BeautifulSoup
 
 import ebook2text.ebooklib as ebooklib
+from ebook2text import logger
 from ebook2text._types import EpubBook, EpubItem, ResultSet, Tag
 from ebook2text.abstract_book import BookConversion, TextExtraction
 from ebook2text.chapter_check import NOT_CHAPTER, is_chapter, is_not_chapter
 from ebook2text.ebooklib import epub
+from ebook2text.ebooklib.epub import EpubException
 
 
 class EpubConverter(BookConversion):
@@ -33,12 +35,16 @@ class EpubConverter(BookConversion):
 
     def _read_file(self, file_path: Path) -> Generator[EpubItem, None, None]:
         """Reads Epub file using Ebooklib package"""
-        epub_book: EpubBook = epub.read_epub(
-            file_path, options={"ignore_ncx": True}
-        )
-        yield from epub_book.get_items()
+        try:
+            epub_book: EpubBook = epub.read_epub(
+                file_path, options={"ignore_ncx": True}
+            )
+            yield from epub_book.get_items()
+        except EpubException as e:
+            logger.error(f"Error reading EPUB file: {e}")
+            return
 
-    def _process_chapter_text(self, item) -> str:
+    def _process_chapter_text(self, item: EpubItem) -> str:
         """
         Extracts text from a chapter item.
 
@@ -53,7 +59,7 @@ class EpubConverter(BookConversion):
         elements: ResultSet[Tag] = soup.find_all(TEXT_ELEMENTS)
 
         for i, element in enumerate(elements[: self.MAX_LINES_TO_CHECK]):
-            text = self.converter.extract_text(element)
+            text = self.text_extractor.extract_text(element)
             if any(word in NOT_CHAPTER for word in text.split()):
                 return ""
             elif is_chapter(text):

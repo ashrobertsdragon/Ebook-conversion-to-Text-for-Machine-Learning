@@ -14,8 +14,8 @@ def epub_file(test_files_dir):
 
 
 @pytest.fixture
-def epub_file_with_images(test_files_dir):
-    return str(test_files_dir / "test_epub_with_images.epub")
+def epub_file_with_image(test_files_dir):
+    return str(test_files_dir / "test_epub_with_image.epub")
 
 
 @pytest.fixture
@@ -43,57 +43,59 @@ def epub_text_extractor(epub_image_extractor):
 
 
 @pytest.fixture
-def epub_converter(epub_file, sample_metadata, epub_text_extractor):
-    return EpubConverter(epub_file, sample_metadata, epub_text_extractor)
+def epub_converter(epub_file, metadata, epub_text_extractor):
+    return EpubConverter(epub_file, metadata, epub_text_extractor)
 
 
 @pytest.fixture
-def epub_converter_with_images(
-    epub_file_with_images, sample_metadata, epub_text_extractor
+def epub_converter_with_image(
+    epub_file_with_image, metadata, epub_text_extractor
 ):
-    return EpubConverter(
-        epub_file_with_images, sample_metadata, epub_text_extractor
-    )
+    return EpubConverter(epub_file_with_image, metadata, epub_text_extractor)
 
 
-def test_split_chapters(epub_converter):
-    result = epub_converter.split_chapters()
-    assert isinstance(result, str)
-    assert "Sample Title" in result
-    assert "***" in result
+class TestEpubConverter:
+    def test_parse_file_returns_valid_chapters(self, epub_converter):
+        chapters = list(epub_converter.parse_file())
+        assert len(chapters)
+        assert all(isinstance(chapter, str) for chapter in chapters)
+        assert all(len(chapter.strip()) > 0 for chapter in chapters)
 
+    def test_process_chapter_text_extracts_content(
+        self, epub_converter, epub_file
+    ):
+        page_4 = list(epub_converter._read_file(epub_file))[4]
+        text = epub_converter._process_chapter_text(page_4)
+        assert isinstance(text, str)
+        assert text == "First chapter paragraph text."
 
-def test_split_chapters_with_images(epub_converter_with_images):
-    result = epub_converter_with_images.split_chapters()
-    assert isinstance(result, str)
-    assert "Sample Title" in result
-    assert "***" in result
+    def test_empty_epub_file_returns_empty_generator(
+        self, tmp_path, epub_text_extractor
+    ):
+        empty_file = tmp_path / "empty.epub"
+        empty_file.touch()
+        converter = EpubConverter(empty_file, {}, epub_text_extractor)
+        chapters = list(converter.parse_file())
+        assert not len(chapters)
 
+    def test_return_string_with_separators(self, epub_converter):
+        chapters = list(epub_converter.parse_file())
+        result_string = epub_converter.return_string(chapters)
+        assert isinstance(result_string, str)
+        assert (
+            result_string.count(epub_converter.chapter_separator)
+            == len(chapters) - 1
+        )
+        assert all(chapter in result_string for chapter in chapters)
 
-def test_extract_text(epub_converter, sample_element_with_text):
-    text_extractor = EpubTextExtractor(epub_converter)
-    extracted_text = text_extractor.extract_text(sample_element_with_text)
-    assert extracted_text == "This is a sample paragraph."
+    def test_write_text_with_chapter_separators(
+        self, epub_converter, tmp_path
+    ):
+        content = "This is a test chapter."
+        file_path = tmp_path / "output.txt"
 
-
-def test_extract_text_with_image(
-    epub_converter_with_images, sample_element_with_image, monkeypatch
-):
-    ocr_output = "Extracted OCR text"
-
-    monkeypatch.setattr("ebook2text.ocr.run_ocr", lambda x: ocr_output)
-    text_extractor = EpubTextExtractor(epub_converter_with_images)
-    extracted_text = text_extractor.extract_text(sample_element_with_image)
-
-    assert extracted_text == ocr_output
-
-
-def test_extract_images_with_image_element(
-    epub_converter_with_images, sample_element_with_image
-):
-    image_extractor = EpubImageExtractor(epub_converter_with_images.book)
-    images = image_extractor.extract_images(sample_element_with_image)
-
-    assert isinstance(images, list)
-    assert len(images) > 0
-    assert all(isinstance(img, str) for img in images)
+        epub_converter.write_text(content, file_path)
+        with file_path.open("r", encoding="utf-8") as f:
+            written_content = f.read()
+        expected_content = f"\n{epub_converter.CHAPTER_SEPARATOR}\n{content}"
+        assert written_content == expected_content
