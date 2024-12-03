@@ -77,3 +77,4 @@ def convert_file(
     for content in converter.parse_file():
         if content:
             converter.write_text(content, save_path)
+    return

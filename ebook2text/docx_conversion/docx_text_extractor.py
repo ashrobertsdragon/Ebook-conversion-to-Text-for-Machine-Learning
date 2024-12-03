@@ -22,7 +22,7 @@ class DocxTextExtractor(TextExtraction):
         Returns:
             str: The extracted and processed text.
         """
-        ocr_text = self.extract_image_text(paragraph)
+        ocr_text = self._extract_image_text(paragraph)
         paragraph_text = paragraph.text.strip()
         return ocr_text or paragraph_text
 

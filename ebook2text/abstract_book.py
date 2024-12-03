@@ -38,11 +38,19 @@ class BookConversion(ABC, Generic[T]):
         self.CHAPTER_SEPARATOR: str = "***"
 
     @abstractmethod
-    def _read_file(self, file_path: str) -> Generator[T, None, None]:
+    def _read_file(self, file_path: Path) -> Generator[T, None, None]:
         raise NotImplementedError("Must be implemented in child class")
 
     @abstractmethod
-    def parse_file(self) -> str:
+    def parse_file(self) -> Generator[str, None, None]:
+        raise NotImplementedError("Must be implemented in child class")
+
+    @abstractmethod
+    def write_text(self, content: str, file_path: Path) -> None:
+        raise NotImplementedError("Must be implemented in child class")
+
+    @abstractmethod
+    def return_string(self, generator: Generator[str, None, None]) -> str:
         raise NotImplementedError("Must be implemented in child class")
 
     def clean_text(self, text: str) -> str:

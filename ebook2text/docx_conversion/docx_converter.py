@@ -96,11 +96,10 @@ class DocxConverter(BookConversion):
             bool: True if the paragraph contains a page break, False otherwise
         """
         p_element = paragraph._element
-        if (
+        return (
             p_element.pPr is not None
             and p_element.pPr.pageBreakBefore is not None
-        ):
-            return True
+        )
 
     def _check_index(self, index: int) -> bool:
         """
@@ -165,7 +164,7 @@ class DocxConverter(BookConversion):
 
         if self._is_start_of_chapter(paragraph_text, current_para_index):
             current_para_index = 0
-            processed_text = self.CHAPTER_SEPARATOR if self.pages_list else ""
+            processed_text = self.CHAPTER_SEPARATOR
             self.non_chapter = False
         elif self._is_non_chapter(paragraph_text, current_para_index):
             processed_text = ""

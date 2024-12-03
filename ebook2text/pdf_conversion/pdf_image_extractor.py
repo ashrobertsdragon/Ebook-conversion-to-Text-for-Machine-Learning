@@ -39,20 +39,17 @@ def _convert_psliteral_to_str(attr: PSLiteral) -> str:
     return str(attr).lstrip("/'").rstrip("'")
 
 
-def _get_pillow_mode(bit_depth: int, color_space: str) -> str:
+def _get_pillow_mode(color_space: str) -> str:
     """
     Get the Pillow mode based on bit depth and color space.
 
     Args:
-        bit_depth (int): Bit depth of the image.
         color_space (str): Color space of the image.
 
     Returns:
         str: Pillow mode.
     """
     match color_space:
-        case "DeviceGray":
-            return "1" if bit_depth == 1 else "L"
         case "DeviceRGB":
             return "RGB"
         case "DeviceCMYK":
@@ -151,9 +148,10 @@ class PDFImageExtractor(ImageExtraction):
             )
             return ""
 
-    def _transcode_to_png(self, jpeg_data: bytes) -> bytes:
+    def _transcode_to_png(self, jpeg_data: bytes) -> str:
         """
-        Converts a JPEG byte stream to a PNG byte stream without decoding.
+        Converts a JPEG byte stream to a PNG-based base64-encoded string
+        without decoding.
 
         Args:
             jpeg_data (bytes): Byte stream of the JPEG image.
