@@ -85,7 +85,7 @@ class DocxConverter(BookConversion):
 
     def return_string(self, generator: Generator[str, None, None]) -> str:
         """Return the parsed text as a string."""
-        return "\n".join(generator)
+        return "\n".join(line for line in generator if line.strip())
 
     def _contains_page_break(self, paragraph: Paragraph) -> bool:
         """
