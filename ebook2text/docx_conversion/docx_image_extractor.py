@@ -12,9 +12,6 @@ class DocxImageExtractor(ImageExtraction):
     A class dedicated to extracting images from docx Paragraph objects.
     """
 
-    def __init__(self):
-        self.paragraph: Paragraph = None
-
     def extract_images(self, paragraph: Paragraph) -> List[str]:
         """
         Extracts and converts images found in the paragraph into
@@ -24,8 +21,7 @@ class DocxImageExtractor(ImageExtraction):
             list: A list of base64-encoded strings, each representing an image
                 extracted from the paragraph.
         """
-        self.paragraph = paragraph
-        image_blobs: list = self._extract_image_blobs()
+        image_blobs: list = self._extract_image_blobs(paragraph)
         return self._build_base64_images_list(image_blobs)
 
     def _build_base64_images_list(self, image_streams: list) -> list:
@@ -42,7 +38,7 @@ class DocxImageExtractor(ImageExtraction):
             base64.b64encode(image).decode("utf-8") for image in image_streams
         ]
 
-    def _extract_image_blobs(self) -> list:
+    def _extract_image_blobs(self, paragraph: Paragraph) -> list:
         """
         Extracts image blobs from the paragraph.
 
@@ -52,12 +48,14 @@ class DocxImageExtractor(ImageExtraction):
         namespace: dict = docx_ns_map
         image_blobs: list = []
 
-        blips = self.paragraph._p.findall(".//a:blip", namespaces=namespace)
+        blips = paragraph._p.findall(".//a:blip", namespaces=namespace)
         for blip in blips:
             try:
                 rId = blip.attrib[f"{{{namespace['r']}}}embed"]
-                image_part = self.paragraph.part.related_parts[rId]
-                image_blobs.append(image_part.blob)
+                image_part = paragraph.part.related_parts[rId]
+                blob = image_part.blob
+                image_blobs.append(blob)
             except (KeyError, ValueError, AttributeError) as e:
                 logger.exception(f"Corrupted image data: {str(e)}")
+                continue
         return image_blobs
