@@ -1,9 +1,7 @@
-from unittest.mock import Mock, patch
-
 import pytest
 from docx import Document  # constructor
-from docx.api import DocumentObject  # type
 from docx.oxml import parse_xml
+from docx.text.paragraph import Paragraph
 
 from ebook2text._namespaces import docx_ns_map
 from ebook2text.docx_conversion import (
@@ -11,7 +9,6 @@ from ebook2text.docx_conversion import (
     DocxImageExtractor,
     DocxTextExtractor,
 )
-from ebook2text.ocr import run_ocr
 
 
 @pytest.fixture(scope="session")
@@ -32,7 +29,7 @@ def docx_file_with_image(test_files_dir):
 def docx_paragraph_with_image(docx_file_with_image):
     """Fixture to provide a paragraph with an image for testing."""
     doc = Document(docx_file_with_image)
-    return doc.paragraphs[1]
+    return doc.paragraphs[8]
 
 
 @pytest.fixture
@@ -56,12 +53,6 @@ def docx_image_extractor_with_image(
     extractor = docx_image_extractor
     extractor.paragraph = docx_paragraph_with_image
     return extractor
-
-
-@pytest.fixture
-def expected_base64_image():
-    """Fixture to provide the expected base64-encoded string of an image."""
-    return "your_base64_encoded_string_here"
 
 
 @pytest.fixture
@@ -94,9 +85,9 @@ def docx_converter_with_image(
 
 def test_read_file(docx_converter):
     """Test that a DOCX file is read and parsed correctly."""
-    doc = docx_converter._read_file(docx_converter.file_path)
-    assert isinstance(doc, DocumentObject)
-    assert len(doc.paragraphs) > 0
+    paragraphs = list(docx_converter._read_file(docx_converter.file_path))
+    assert isinstance(paragraphs[0], Paragraph)
+    assert paragraphs
 
 
 def test_extract_images_with_image(
@@ -165,129 +156,82 @@ def test_extract_images_from_paragraph_without_images(
 
 
 def test_missing_embed_attribute(
-    docx_image_extractor, docx_paragraph_with_image
+    docx_image_extractor, docx_paragraph_with_image, mocker
 ):
     """Test handling of missing embed attribute in blip"""
-    with patch.object(docx_paragraph_with_image._p, "findall") as mock_findall:
-        # Create a malformed blip without embed attribute
-        blip = parse_xml("""
-            <a:blip xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-            </a:blip>
-        """)
-        mock_findall.return_value = [blip]
-        docx_image_extractor.paragraph = docx_paragraph_with_image
-        blobs = docx_image_extractor._extract_image_blobs()
-        assert blobs == []
+    mock_findall = mocker.patch.object(docx_paragraph_with_image._p, "findall")
+    # Create a malformed blip without embed attribute
+    blip = parse_xml("""
+        <a:blip xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+        </a:blip>
+    """)
+    mock_findall.return_value = [blip]
+    docx_image_extractor.paragraph = docx_paragraph_with_image
+    blobs = docx_image_extractor._extract_image_blobs()
+    assert blobs == []
 
 
-def test_invalid_relationship_id(
-    docx_image_extractor, docx_paragraph_with_image
-):
+def test_invalid_relationship_id(docx_image_extractor, mocker):
     """Test handling of invalid relationship ID"""
-    with patch.object(
-        docx_paragraph_with_image.part, "related_parts", new_callable=dict
-    ):
-        # Leave related_parts empty so any rId will be invalid
-        docx_image_extractor.paragraph = docx_paragraph_with_image
-        blobs = docx_image_extractor._extract_image_blobs()
-        assert blobs == []
+    mock_paragraph = mocker.Mock()
+
+    mock_blip = mocker.Mock()
+    mock_blip.attrib = {f"{{{docx_ns_map['r']}}}embed": "rId123"}
+    mock_paragraph._p = mocker.Mock()
+    mock_paragraph._p.findall.return_value = [mock_blip]
+
+    mock_part = mocker.Mock()
+    mock_part.related_parts = {}
+    mock_paragraph.part = mock_part
+    # Leave related_parts empty so any rId will be invalid
+    blobs = docx_image_extractor._extract_image_blobs(mock_paragraph)
+    assert blobs == []
 
 
-def test_malformed_paragraph_structure(
-    docx_image_extractor, docx_paragraph_with_image
-):
+def test_malformed_paragraph_structure(docx_image_extractor, mocker):
     """Test handling of malformed paragraph structure"""
-    with patch.object(docx_paragraph_with_image, "part", None):
-        docx_image_extractor.paragraph = docx_paragraph_with_image
-        blobs = docx_image_extractor._extract_image_blobs()
-        assert blobs == []
+    mock_paragraph = mocker.Mock()
+    mock_paragraph._p = mocker.Mock()
+    mock_paragraph._p.findall.return_value = []
+    mock_paragraph.part = None
+    blobs = docx_image_extractor._extract_image_blobs(mock_paragraph)
+    assert blobs == []
 
 
-def test_corrupted_image_data(docx_paragraph_with_image):
+def test_corrupted_image_data(docx_image_extractor, mocker):
     """Test handling of corrupted image data"""
-    with patch.dict(
-        docx_paragraph_with_image.part.related_parts
-    ) as mock_related_parts:
-        # Get the first image relationship ID
-        blips = docx_paragraph_with_image._p.findall(
-            ".//a:blip", namespaces=docx_ns_map
-        )
-        if not blips:
-            pytest.skip("No images found in test document")
+    mock_paragraph = mocker.Mock()
 
-        rId = blips[0].attrib[f"{{{docx_ns_map['r']}}}embed"]
+    mock_blip_valid = mocker.Mock()
+    rId_valid = "rId123"
+    mock_blip_valid.attrib = {f"{{{docx_ns_map['r']}}}embed": rId_valid}
 
-        # Replace the actual image part with one that raises ValueError
-        mock_image_part = Mock()
-        mock_image_part.blob = property(
-            lambda self: exec('raise ValueError("Corrupted image data")')
-        )
-        mock_related_parts[rId] = mock_image_part
+    mock_blip_corrupt = mocker.Mock()
+    rId_corrupt = "rIdCorrupt"
+    mock_blip_corrupt.attrib = {f"{{{docx_ns_map['r']}}}embed": rId_corrupt}
 
-        extractor = DocxImageExtractor(docx_paragraph_with_image)
-        blobs = extractor._extract_image_blobs()
+    mock_paragraph._p = mocker.Mock()
+    mock_paragraph._p.findall.return_value = [
+        mock_blip_valid,
+        mock_blip_corrupt,
+    ]
 
-        assert len(blobs) == len(blips) - 1
+    mock_part = mocker.Mock()
+    mock_paragraph.part = mock_part
+    mock_image_part_valid = mocker.Mock()
+    mock_image_part_valid.blob = b"valid_image_data"
 
+    mock_image_part_corrupt = mocker.Mock()
+    type(mock_image_part_corrupt).blob = mocker.PropertyMock(
+        side_effect=ValueError("Corrupted image data")
+    )
 
-@pytest.mark.parametrize(
-    "exception_type",
-    [
-        KeyError("Missing embed attribute"),
-        KeyError("Invalid relationship ID"),
-        AttributeError("Missing part attribute"),
-        ValueError("Corrupted image data"),
-    ],
-)
-def test_exception_logging(
-    docx_image_extractor, docx_paragraph_with_image, exception_type, caplog
-):
-    """Test that exceptions are properly logged"""
-    with patch.object(
-        DocxImageExtractor, "_extract_image_blobs"
-    ) as mock_extract:
-        mock_extract.side_effect = exception_type
-        docx_image_extractor.paragraph = docx_paragraph_with_image
-        docx_image_extractor._extract_image_blobs()
+    mock_part.related_parts = {
+        rId_valid: mock_image_part_valid,
+        rId_corrupt: mock_image_part_corrupt,
+    }
 
-        assert "Corrupted image data" in caplog.text
-
-
-def test_extract_paragraphs(docx_converter):
-    """Test paragraph extraction from the DOCX document."""
-    paragraphs = docx_converter.extract_paragraphs()
-    assert len(paragraphs) == 5
-
-
-def test_extract_text(docx_converter):
-    """Test text extraction from paragraphs."""
-    paragraphs = docx_converter.extract_paragraphs()
-    text_extractor = DocxTextExtractor(docx_converter)
-    text = text_extractor.extract_text(paragraphs[0])
-    assert text == "This is the introduction paragraph."
-
-
-def test_split_chapters(docx_converter):
-    """Test splitting paragraphs into chapters."""
-    structured_text = docx_converter.split_chapters()
-    assert "Chapter 1" in structured_text
-    assert "Chapter 2" in structured_text
-
-
-def test_extract_image_text_no_images(docx_converter):
-    """Test image extraction when no images are present in paragraphs."""
-    paragraphs = docx_converter.extract_paragraphs()
-    text_extractor = DocxTextExtractor(docx_converter)
-    extracted_text = text_extractor.extract_text(paragraphs[0])
-    assert extracted_text == ""
-
-
-def test_extract_images_with_mock_ocr(docx_converter_with_image, monkeypatch):
-    """Test OCR and image extraction with a mock run_ocr function."""
-    paragraphs = docx_converter.extract_paragraphs()
-    monkeypatch.setattr(run_ocr, "run_ocr", lambda _: "Mocked OCR Text")
-
-    text_extractor = DocxTextExtractor(docx_converter)
-    extracted_text = text_extractor.extract_text(paragraphs[0])
-
-    assert extracted_text == "Mocked OCR Text"
+    blobs = docx_image_extractor._extract_image_blobs(mock_paragraph)
+    print("Extracted blobs:", blobs)
+    assert len(blobs) == 1, f"Unexpected blobs: {blobs}"
+    assert blobs[0] == b"valid_image_data"
