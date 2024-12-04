@@ -1,11 +1,7 @@
 import pytest
 from bs4 import BeautifulSoup
 
-from ebook2text.epub_conversion import (
-    EpubConverter,
-    EpubImageExtractor,
-    EpubTextExtractor,
-)
+from ebook2text.epub_conversion import EpubConverter, EpubTextExtractor
 
 
 @pytest.fixture
@@ -33,13 +29,8 @@ def sample_element_with_image():
 
 
 @pytest.fixture
-def epub_image_extractor():
-    return EpubImageExtractor()
-
-
-@pytest.fixture
-def epub_text_extractor(epub_image_extractor):
-    return EpubTextExtractor(epub_image_extractor)
+def epub_text_extractor():
+    return EpubTextExtractor()
 
 
 @pytest.fixture
@@ -64,19 +55,10 @@ class TestEpubConverter:
     def test_process_chapter_text_extracts_content(
         self, epub_converter, epub_file
     ):
-        page_4 = list(epub_converter._read_file(epub_file))[4]
+        page_4 = list(epub_converter._get_items())[4]
         text = epub_converter._process_chapter_text(page_4)
         assert isinstance(text, str)
         assert text == "First chapter paragraph text."
-
-    def test_empty_epub_file_returns_empty_generator(
-        self, tmp_path, epub_text_extractor
-    ):
-        empty_file = tmp_path / "empty.epub"
-        empty_file.touch()
-        converter = EpubConverter(empty_file, {}, epub_text_extractor)
-        chapters = list(converter.parse_file())
-        assert not len(chapters)
 
     def test_return_string_with_separators(self, epub_converter):
         chapters = list(epub_converter.parse_file())
@@ -97,5 +79,59 @@ class TestEpubConverter:
         epub_converter.write_text(content, file_path)
         with file_path.open("r", encoding="utf-8") as f:
             written_content = f.read()
-        expected_content = f"\n{epub_converter.CHAPTER_SEPARATOR}\n{content}"
+        expected_content = f"\n***\n{content}"
         assert written_content == expected_content
+
+
+class TestEpubTextExtractor:
+    def test_extract_text_from_regular_element(
+        self, epub_text_extractor, sample_element_with_text
+    ):
+        result = epub_text_extractor.extract_text(sample_element_with_text)
+        assert result == "This is a sample paragraph."
+
+    def test_extract_text_from_image_element(
+        self,
+        epub_converter_with_image,
+        epub_text_extractor,
+        sample_element_with_image,
+        mocker,
+    ):
+        mocker.patch(
+            "ebook2text.epub_conversion.epub_text_extractor.run_ocr",
+            return_value="Chapter One",
+        )
+        epub_book = epub_converter_with_image.epub_book
+        element = sample_element_with_image
+        print(element.get("src"))
+        print(element.name)
+        for key, value in element.attrs.items():
+            print(key, value)
+        result = epub_text_extractor.extract_text(
+            sample_element_with_image, epub_book
+        )
+        assert isinstance(result, str)
+        assert result == "Chapter One"
+
+    def test_extract_text_from_empty_element(self, epub_text_extractor):
+        html = "<div></div>"
+        soup = BeautifulSoup(html, "html.parser")
+        empty_element = soup.find("div")
+        result = epub_text_extractor.extract_text(empty_element)
+        assert result == ""
+
+    def test_extract_text_from_whitespace_element(self, epub_text_extractor):
+        html = "<p>    </p>"
+        soup = BeautifulSoup(html, "html.parser")
+        whitespace_element = soup.find("p")
+        result = epub_text_extractor.extract_text(whitespace_element)
+        assert result == ""
+
+    def test_extract_text_from_element_with_nested_elements(
+        self, epub_text_extractor
+    ):
+        html = "<div><p>This is a <strong>sample</strong> paragraph with <em>nested</em> elements.</p></div>"
+        soup = BeautifulSoup(html, "html.parser")
+        element = soup.find("p")
+        result = epub_text_extractor.extract_text(element)
+        assert result == "This is a sample paragraph with nested elements."

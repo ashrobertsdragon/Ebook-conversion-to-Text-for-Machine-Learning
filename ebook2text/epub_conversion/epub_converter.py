@@ -6,13 +6,14 @@ from bs4 import BeautifulSoup
 import ebook2text.ebooklib as ebooklib
 from ebook2text import logger
 from ebook2text._types import EpubBook, EpubItem, ResultSet, Tag
-from ebook2text.abstract_book import BookConversion, TextExtraction
 from ebook2text.chapter_check import NOT_CHAPTER, is_chapter, is_not_chapter
 from ebook2text.ebooklib import epub
 from ebook2text.ebooklib.epub import EpubException
+from ebook2text.epub_conversion.epub_text_extractor import EpubTextExtractor
+from ebook2text.text_utilities import desmarten_text
 
 
-class EpubConverter(BookConversion):
+class EpubConverter:
     """
     Converts EPUB files to text and splits chapters.
 
@@ -27,22 +28,28 @@ class EpubConverter(BookConversion):
     """
 
     def __init__(
-        self, file_path: Path, metadata: dict, text_extractor: TextExtraction
+        self,
+        file_path: Path,
+        metadata: dict,
+        text_extractor: EpubTextExtractor,
     ) -> None:
-        super().__init__(file_path, metadata, text_extractor)
-        self.items: Generator[EpubItem, None, None] = self._objects
-        self.chapter_separator = f"\n{self.CHAPTER_SEPARATOR}\n"
+        self.epub_book: EpubBook = self._read_file(file_path)
+        self.metadata = metadata
+        self.text_extractor = text_extractor
+        self.chapter_separator = "\n***\n"
+        self.max_lines_to_check = 6
 
-    def _read_file(self, file_path: Path) -> Generator[EpubItem, None, None]:
+    def _read_file(self, file_path: Path) -> EpubBook:
         """Reads Epub file using Ebooklib package"""
         try:
-            epub_book: EpubBook = epub.read_epub(
-                file_path, options={"ignore_ncx": True}
-            )
-            yield from epub_book.get_items()
+            return epub.read_epub(file_path, options={"ignore_ncx": True})
         except EpubException as e:
             logger.error(f"Error reading EPUB file: {e}")
-            return
+            raise
+
+    def _get_items(self) -> Generator[EpubItem, None, None]:
+        """Yields items in the Epub file."""
+        yield from self.epub_book.get_items()
 
     def _process_chapter_text(self, item: EpubItem) -> str:
         """
@@ -58,8 +65,8 @@ class EpubConverter(BookConversion):
         soup = BeautifulSoup(item.content, "html.parser")
         elements: ResultSet[Tag] = soup.find_all(TEXT_ELEMENTS)
 
-        for i, element in enumerate(elements[: self.MAX_LINES_TO_CHECK]):
-            text = self.text_extractor.extract_text(element)
+        for i, element in enumerate(elements[: self.max_lines_to_check]):
+            text = self.text_extractor.extract_text(element, self.epub_book)
             if any(word in NOT_CHAPTER for word in text.split()):
                 return ""
             elif is_chapter(text):
@@ -71,6 +78,12 @@ class EpubConverter(BookConversion):
                 )
         return ""
 
+    def clean_text(self, text: str) -> str:
+        """
+        Removes smart punctuation from text
+        """
+        return desmarten_text(text)
+
     def parse_file(self) -> Generator[str, None, None]:
         """
         Split the EPUB file into chapters and return the cleaned text.
@@ -78,7 +91,7 @@ class EpubConverter(BookConversion):
         Returns:
             str: The cleaned text of the chapters separated by '***'.
         """
-        for item in self._objects:
+        for item in self._get_items():
             if (
                 item.get_type() == ebooklib.ITEM_DOCUMENT
                 and not is_not_chapter(item.file_name.lower(), self.metadata)

@@ -1,17 +1,17 @@
-from ebook2text._types import Tag
-from ebook2text.abstract_book import ImageExtraction, TextExtraction
-from ebook2text.ocr import run_ocr
+from typing import Optional
+
+from ebook2text._types import EpubBook, Tag
+from ebook2text.ocr import encode_image_bytes, run_ocr
 
 
-class EpubTextExtractor(TextExtraction):
+class EpubTextExtractor:
     """
     Extracts text from EPUB elements, handling image OCR.
     """
 
-    def __init__(self, image_extractor: ImageExtraction):
-        self.image_extractor = image_extractor
-
-    def extract_text(self, element: Tag) -> str:
+    def extract_text(
+        self, element: Tag, book: Optional[EpubBook] = None
+    ) -> str:
         """
         Extracts text from an element, using OCR for images.
 
@@ -22,13 +22,29 @@ class EpubTextExtractor(TextExtraction):
         Returns:
             str: The extracted text from the element.
         """
-        if element.name == "img":
-            return self._extract_image_text(element)
-        else:
+        if element.name != "img":
             return self._extract_text(element)
+        if not book:
+            raise ValueError("Book is not provided")
+        return self._extract_image_text(element, book)
 
-    def _extract_image_text(self, element: Tag) -> str:
-        base64_images: list = self.image_extractor.extract_images(element)
+    def _get_image_file(self, element: Tag, book: EpubBook) -> list:
+        """
+        Extracts images from the EPUB file.
+
+        Args:
+            element: The element containing the image data.
+
+        Returns:
+            list: A list of encoded image data.
+        """
+        if element.name != "img":
+            raise ValueError("Element is not an image")
+        image = book.get_item_with_id(element.get("src"))
+        return [encode_image_bytes(image.get_content())]
+
+    def _extract_image_text(self, element: Tag, book: EpubBook) -> str:
+        base64_images: list = self._get_image_file(element, book)
         return run_ocr(base64_images)
 
     def _extract_text(self, element: Tag) -> str:
