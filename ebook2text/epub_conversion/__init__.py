@@ -8,11 +8,11 @@ __all__ = [
     "EpubConverter",
     "EpubTextExtractor",
     "convert_epub",
-    "_initialize_epub_converter",
+    "initialize_epub_converter",
 ]
 
 
-def _initialize_epub_converter(
+def initialize_epub_converter(
     file_path: Path, metadata: dict
 ) -> EpubConverter:
     text_extractor = EpubTextExtractor()
@@ -23,7 +23,7 @@ def convert_epub(
     file_path: Path, metadata: dict
 ) -> Generator[str, None, None]:
     """
-    A convienience function that reads an EPUB file and splits it into
+    A convenience function that reads an EPUB file and splits it into
     chapters.
 
     Args:
@@ -34,6 +34,6 @@ def convert_epub(
     Returns:
         str: The cleaned text of the chapters separated by '***'.
     """
-    text_extractor = EpubTextExtractor()
-    epub_converter = EpubConverter(file_path, metadata, text_extractor)
+    epub_converter = initialize_epub_converter(file_path, metadata)
+
     yield from epub_converter.parse_file()

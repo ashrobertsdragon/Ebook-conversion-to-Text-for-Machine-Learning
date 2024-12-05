@@ -1,16 +1,15 @@
 from pathlib import Path
 from typing import Union
 
-from ebook2text.abstract_book import BookConversion
-from ebook2text.docx_conversion import _initialize_docx_converter
-from ebook2text.epub_conversion import _initialize_epub_converter
-from ebook2text.pdf_conversion import _initialize_pdf_converter
+from ebook2text.docx_conversion import DocxConverter, initialize_docx_converter
+from ebook2text.epub_conversion import EpubConverter, initialize_epub_converter
+from ebook2text.pdf_conversion import PDFConverter, initialize_pdf_converter
 from ebook2text.text_parser import TextParser
 
 
 def _initialize_converter(
     file_path: Path, metadata: dict, extension: str
-) -> Union[BookConversion, TextParser]:
+) -> Union[DocxConverter, EpubConverter, PDFConverter, TextParser]:
     """
     Initialize the appropriate converter based on the file extension.
 
@@ -26,11 +25,11 @@ def _initialize_converter(
         ValueError: If the file type is not supported.
     """
     if extension == ".epub":
-        return _initialize_epub_converter(file_path, metadata)
+        return initialize_epub_converter(file_path, metadata)
     elif extension == ".pdf":
-        return _initialize_pdf_converter(file_path, metadata)
+        return initialize_pdf_converter(file_path, metadata)
     elif extension == ".docx":
-        return _initialize_docx_converter(file_path, metadata)
+        return initialize_docx_converter(file_path, metadata)
     elif extension in {"txt", "text"}:
         return TextParser(file_path)
     raise ValueError(f"Unsupported file type: {extension}")

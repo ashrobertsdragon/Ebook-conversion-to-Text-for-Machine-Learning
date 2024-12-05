@@ -10,11 +10,11 @@ __all__ = [
     "DocxImageExtractor",
     "DocxTextExtractor",
     "convert_docx",
-    "_initialize_docx_converter",
+    "initialize_docx_converter",
 ]
 
 
-def _initialize_docx_converter(
+def initialize_docx_converter(
     file_path: Path, metadata: dict
 ) -> DocxConverter:
     image_extractor = DocxImageExtractor()
@@ -26,7 +26,8 @@ def convert_docx(
     file_path: Path, metadata: dict
 ) -> Generator[str, None, None]:
     """
-    Reads the contents of a DOCX file and returns the processed text.
+    A convenience function that reads the contents of a DOCX file and returns
+    the processed text.
 
     Args:
         file_path (str): The path to the DOCX file.
@@ -36,7 +37,6 @@ def convert_docx(
         str: The processed text of the DOCX file formatted into chapters.
     """
 
-    image_extractor = DocxImageExtractor()
-    text_extractor = DocxTextExtractor(image_extractor)
-    docx_converter = DocxConverter(file_path, metadata, text_extractor)
+    docx_converter = initialize_docx_converter(file_path, metadata)
+
     yield from docx_converter.parse_file()
