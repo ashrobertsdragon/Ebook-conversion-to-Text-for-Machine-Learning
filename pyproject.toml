@@ -44,10 +44,6 @@ line-length = 79
 force-exclude = true
 exclude = [".git", "__pycache__", ".venv", "ebooklib", "dist", "build", ".vscode", ".egg-info"]
 
-[tool.flake8]
-max_line_length = 79
-exclude = [".git", "__pycache__", ".venv", "ebooklib", "dist", "build", ".vscode", ".egg-info"]
-
 [tool.isort]
 line_length = 79
 
@@ -61,5 +57,6 @@ pythonpath = ["."]
 
 [dependency-groups]
 dev = [
+    "pytest-mock>=3.14.0",
     "pytest>=8.3.3",
 ]
