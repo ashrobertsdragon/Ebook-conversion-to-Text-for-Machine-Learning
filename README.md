@@ -30,13 +30,16 @@ To run this script, you need Python 3.9 or above and the following packages:
 3. Place your ebook files in a known directory.
 4. Run the script with the path to the ebook file and a metadata dictionary with keys of 'title' and 'author' as arguments.
 
+- set `save_file` to False, if you want a string returned.
+- provide a Path object of a file name to be written to, to use a custom output filename.
+
 ## Functions
 
-- `convert_file(file_path: str, metadata: dict) -> str`: Main function to convert an ebook file to text.
+- `convert_file(file_path: Path, metadata: dict, *, save_file: bool = True, save_path: Optional[Path] = None) -> Union[str, None]`: Main function to convert an ebook file to text.
 
 ## Contributing
 
-Contributions to this project are welcome. Please ensure that your code follows the existing style for consistency.
+Contributions to this project are welcome. Please use Ruff for formatting to ensure that your code follows the existing style for consistency.
 
 ## License
 
@@ -92,3 +95,9 @@ This project is licensed by ProsePal LLC under the MIT license
 
 - **v1.1.7** (Release date November 10, 2024)
   - FIX: Line concatenation issue in PDFs
+
+- **v2.0.0** (Release date December 4, 2024)
+  - REFACTOR: Converters are now packages with more streamlined constructors.
+  - BREAKING FEATURE: ebook2text now takes Path objects instead of string filenames.
+  - BREAKING FEATURE: Converters no longer have a ChapterSplit class. This is handled by the BookConversion class, with no more circular imports.
+  - NEW FEATURE: `convert_file` now has optional `save_file` and `save_path` arguments to allow for custom output filenames or for a string to be returned instead.
