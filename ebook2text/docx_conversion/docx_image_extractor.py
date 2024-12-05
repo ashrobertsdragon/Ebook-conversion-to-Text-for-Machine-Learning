@@ -1,13 +1,12 @@
-import base64
 from typing import List
 
 from ebook2text import logger
-from ebook2text._namespaces import docx_ns_map
 from ebook2text._types import Paragraph
-from ebook2text.abstract_book import ImageExtraction
+from ebook2text.docx_conversion._namespaces import docx_ns_map
+from ebook2text.ocr import encode_image_bytes
 
 
-class DocxImageExtractor(ImageExtraction):
+class DocxImageExtractor:
     """
     A class dedicated to extracting images from docx Paragraph objects.
     """
@@ -34,9 +33,7 @@ class DocxImageExtractor(ImageExtraction):
         Returns:
             list: A list of base64-encoded strings representing the images.
         """
-        return [
-            base64.b64encode(image).decode("utf-8") for image in image_streams
-        ]
+        return [encode_image_bytes(image) for image in image_streams]
 
     def _extract_image_blobs(self, paragraph: Paragraph) -> list:
         """

@@ -13,7 +13,6 @@ from PIL import Image
 
 from ebook2text import logger
 from ebook2text._exceptions import ImageTooLargeError, ImageTooSmallError
-from ebook2text.abstract_book import ImageExtraction
 
 
 def _expand_bits(data: bytes, bit_depth: int) -> bytes:
@@ -58,7 +57,7 @@ def _get_pillow_mode(color_space: str) -> str:
             return "RGB"  # Default mode for unknown color spaces
 
 
-class PDFImageExtractor(ImageExtraction):
+class PDFImageExtractor:
     def __init__(self, file_path: Path) -> None:
         self.file_path = file_path
 

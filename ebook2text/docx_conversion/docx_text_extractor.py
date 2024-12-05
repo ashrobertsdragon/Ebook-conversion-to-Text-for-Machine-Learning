@@ -1,14 +1,14 @@
 from ebook2text._types import Paragraph
-from ebook2text.abstract_book import ImageExtraction, TextExtraction
+from ebook2text.docx_conversion.docx_image_extractor import DocxImageExtractor
 from ebook2text.ocr import run_ocr
 
 
-class DocxTextExtractor(TextExtraction):
+class DocxTextExtractor:
     """
     Class dedicated to extracting and processing text from docx Paragraphs.
     """
 
-    def __init__(self, image_extractor: ImageExtraction):
+    def __init__(self, image_extractor: DocxImageExtractor):
         self.image_extractor = image_extractor
 
     def extract_text(self, paragraph: Paragraph) -> str:

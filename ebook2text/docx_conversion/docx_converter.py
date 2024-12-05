@@ -4,11 +4,12 @@ from typing import Generator, Tuple
 import docx
 
 from ebook2text._types import Paragraph
-from ebook2text.abstract_book import BookConversion, TextExtraction
 from ebook2text.chapter_check import is_chapter, is_not_chapter
+from ebook2text.docx_conversion.docx_text_extractor import DocxTextExtractor
+from ebook2text.text_utilities import desmarten_text
 
 
-class DocxConverter(BookConversion):
+class DocxConverter:
     """
     Class to convert a Word document to structured text.
 
@@ -21,13 +22,22 @@ class DocxConverter(BookConversion):
     """
 
     def __init__(
-        self, file_path: Path, metadata: dict, text_extractor: TextExtraction
+        self,
+        file_path: Path,
+        metadata: dict,
+        text_extractor: DocxTextExtractor,
     ):
         """
         Initializes the DocxConverter with file path and metadata.
         """
-        super().__init__(file_path, metadata, text_extractor)
-        self.paragraphs: Generator[Paragraph, None, None] = self._objects
+        self.paragraphs: Generator[Paragraph, None, None] = self._read_file(
+            file_path
+        )
+        self.metadata = metadata
+        self.text_extractor = text_extractor
+
+        self._chapter_separator: str = "***"
+        self._max_lines_to_check: int = 6
 
         self.non_chapter: bool = False
 
@@ -87,6 +97,19 @@ class DocxConverter(BookConversion):
         """Return the parsed text as a string."""
         return "\n".join(line for line in generator if line.strip())
 
+    @staticmethod
+    def _remove_smart_punctuation(text: str) -> str:
+        """
+        Remove smart punctuation from the given text.
+
+        Args:
+            text (str): The text to have smart punctuation removed.
+
+        Returns:
+            str: The text with smart punctuation removed.
+        """
+        return desmarten_text(text)
+
     def _contains_page_break(self, paragraph: Paragraph) -> bool:
         """
         Checks if a given paragraph contains a page break.
@@ -113,7 +136,7 @@ class DocxConverter(BookConversion):
             bool: True if the index is greater than or equal to the maximum
                 limit, False otherwise.
         """
-        return index >= self.MAX_LINES_TO_CHECK
+        return index >= self._max_lines_to_check
 
     def _is_start_of_chapter(self, text: str, index: int) -> bool:
         """
@@ -164,7 +187,7 @@ class DocxConverter(BookConversion):
 
         if self._is_start_of_chapter(paragraph_text, current_para_index):
             current_para_index = 0
-            processed_text = self.CHAPTER_SEPARATOR
+            processed_text = self._chapter_separator
             self.non_chapter = False
         elif self._is_non_chapter(paragraph_text, current_para_index):
             processed_text = ""
@@ -172,5 +195,5 @@ class DocxConverter(BookConversion):
         elif self.non_chapter:
             processed_text = ""
         else:
-            processed_text = self.clean_text(paragraph_text)
+            processed_text = self._remove_smart_punctuation(paragraph_text)
         return processed_text, current_para_index

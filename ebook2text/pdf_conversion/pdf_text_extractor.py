@@ -4,11 +4,11 @@ from pdfminer.pdfdocument import PDFSyntaxError
 
 from ebook2text import logger
 from ebook2text._types import LTChar, LTContainer, LTPage, LTText
-from ebook2text.abstract_book import ImageExtraction, TextExtraction
 from ebook2text.ocr import run_ocr
+from ebook2text.pdf_conversion.pdf_image_extractor import PDFImageExtractor
 
 
-class PDFTextExtractor(TextExtraction):
+class PDFTextExtractor:
     """
     The PDFTextExtractor class implements the functionality to extract text
     from a PDF page, including OCR text from images.
@@ -18,7 +18,7 @@ class PDFTextExtractor(TextExtraction):
             images.
     """
 
-    def __init__(self, image_extractor: ImageExtraction) -> None:
+    def __init__(self, image_extractor: PDFImageExtractor) -> None:
         self.image_extractor = image_extractor
         self._image_obj_nums: list[int] = []
         self._pdf_text_list: list[str] = []

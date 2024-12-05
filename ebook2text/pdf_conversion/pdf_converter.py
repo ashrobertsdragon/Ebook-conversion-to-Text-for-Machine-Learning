@@ -6,12 +6,13 @@ from pdfminer.high_level import extract_pages
 
 from ebook2text import logger
 from ebook2text._types import LTPage
-from ebook2text.abstract_book import BookConversion, TextExtraction
 from ebook2text.pdf_conversion._enums import LineAction, LineType
 from ebook2text.pdf_conversion.pdf_line_logic import check_line, compare_lines
+from ebook2text.pdf_conversion.pdf_text_extractor import PDFTextExtractor
+from ebook2text.text_utilities import desmarten_text
 
 
-class PDFConverter(BookConversion):
+class PDFConverter:
     """
     PDFConverter class for converting PDF files to text and images.
 
@@ -28,11 +29,15 @@ class PDFConverter(BookConversion):
     SENTENCE_PUNCTUATION: tuple = (".", "!", "?", '."', '!"', '?"')
 
     def __init__(
-        self, file_path: Path, metadata: dict, text_extractor: TextExtraction
+        self, file_path: Path, metadata: dict, text_extractor: PDFTextExtractor
     ):
-        super().__init__(file_path, metadata, text_extractor)
-        self.pages = self._objects
-        self.chapter_separator = f"{self.CHAPTER_SEPARATOR}\n"
+        self.pages: Generator[LTPage, None, None] = self._read_file(file_path)
+        self.metadata = metadata
+        self._text_extractor = text_extractor
+
+        self._max_lines_to_check = 6
+        self._chapter_separator = "***\n"
+
         self._page: List[str] = []
 
     def _read_file(self, file_path: Path) -> Generator[LTPage, None, None]:
@@ -47,7 +52,7 @@ class PDFConverter(BookConversion):
         """
         try:
             yield from extract_pages(file_path, maxpages=25)
-        except Exception as e:
+        except OSError as e:
             logger.error(f"Error reading PDF file: {e}")
 
     def ends_with_punctuation(self, text: str) -> bool:
@@ -59,12 +64,25 @@ class PDFConverter(BookConversion):
         Determines if the page is a title page by comparing the number of lines in
         the page to a threshold.
         """
-        return len(page_lines) < self.MAX_LINES_TO_CHECK
+        return len(page_lines) < self._max_lines_to_check
 
     @staticmethod
     def split_line(line: str) -> list[str]:
         """Split the line at newline characters."""
         return line.split("\n")
+
+    @staticmethod
+    def _remove_smart_punctuation(text: str) -> str:
+        """
+        Remove smart punctuation from the given text.
+
+        Args:
+            text (str): The text to have smart punctuation removed.
+
+        Returns:
+            str: The text with smart punctuation removed.
+        """
+        return desmarten_text(text)
 
     def add_line_to_page(self, line: str) -> None:
         self._page.append(line.rstrip() + "\n") if self.ends_with_punctuation(
@@ -97,7 +115,7 @@ class PDFConverter(BookConversion):
             if not line:
                 continue
 
-            if checked < self.MAX_LINES_TO_CHECK:
+            if checked < self._max_lines_to_check:
                 checked += 1
                 line_value: LineType = check_line(line, metadata)
                 action = compare_lines(
@@ -113,7 +131,7 @@ class PDFConverter(BookConversion):
                 elif action in (LineAction.FIRST_LINE, LineAction.CONTINUE):
                     continue
                 elif action == LineAction.ADD_SEPARATOR:
-                    self._page.append(self.chapter_separator)
+                    self._page.append(self._chapter_separator)
             self.add_line_to_page(line)
         # after all lines run through `split_line`
         return "".join(self._page)
@@ -126,14 +144,17 @@ class PDFConverter(BookConversion):
     def parse_file(self) -> Generator[str, None, None]:
         for page in self.pages:
             page_text = self._process_page_text(
-                self.text_extractor.extract_text(page), self.metadata
+                self._text_extractor.extract_text(page), self.metadata
             )
             self._page = []
-            yield self.remove_extra_whitespace(page_text)
+            clean_text = self._remove_smart_punctuation(page_text)
+            yield self.remove_extra_whitespace(clean_text)
 
     def _clean_before_write(self, text: str, file_path: Path) -> str:
         return (
-            text if file_path.exists() else text.lstrip(self.chapter_separator)
+            text
+            if file_path.exists()
+            else text.lstrip(self._chapter_separator)
         )
 
     def write_text(self, content: str, file_path: Path) -> None:
@@ -153,5 +174,5 @@ class PDFConverter(BookConversion):
     def return_string(self, generator: Generator[str, None, None]) -> str:
         """Return the parsed text as a string."""
         return "".join(line for line in generator if line.strip()).lstrip(
-            self.chapter_separator
+            self._chapter_separator
         )
