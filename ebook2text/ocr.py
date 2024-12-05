@@ -20,7 +20,13 @@ GPT_REFUSALS = [
 ]
 
 
+def encode_image_bytes(image_bytes: bytes) -> str:
+    """Encode opened image as base64 string from bytes."""
+    return base64.b64encode(image_bytes).decode("utf-8")
+
+
 def encode_image_file(image_path: str) -> str:
+    """Encode image as base64 string with file path."""
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode("utf-8")
 
