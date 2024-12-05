@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from pathlib import Path
 
 import pytest
 from PIL import Image
@@ -7,6 +7,7 @@ from ebook2text.ocr import (
     clean_response,
     create_image_role_list,
     create_payload,
+    encode_image_bytes,
     encode_image_file,
     run_ocr,
 )
@@ -20,9 +21,8 @@ def base64_images():
 
 
 @pytest.fixture
-def api_client_mock():
-    with patch("ebook2text.ocr.CLIENT.chat.completions.create") as mock:
-        yield mock
+def api_client_mock(mocker):
+    yield mocker.patch("ebook2text.ocr.CLIENT.chat.completions.create")
 
 
 @pytest.fixture
@@ -32,6 +32,14 @@ def saved_image(tmp_path):
     image = Image.frombytes("L", (3, 3), stream)
     image.save(img_file, format="PNG")
     return str(img_file)
+
+
+def test_encode_image_bytes(expected_base64_image):
+    test_file_path = Path(__file__).parent / "test_files" / "chapter_one.jpg"
+    with open(test_file_path, "rb") as image_file:
+        image_bytes = image_file.read()
+    encoded_image = encode_image_bytes(image_bytes)
+    assert encoded_image == expected_base64_image
 
 
 def test_encode_image_file(saved_image):
@@ -91,26 +99,30 @@ def test_run_ocr_no_images(api_client_mock):
     api_client_mock.assert_not_called()
 
 
-def test_run_ocr_single_image(api_client_mock, base64_images):
-    api_client_mock.return_value = MagicMock(
-        choices=[MagicMock(message=MagicMock(content="Detected text"))]
+def test_run_ocr_single_image(api_client_mock, base64_images, mocker):
+    api_client_mock.return_value = mocker.MagicMock(
+        choices=[
+            mocker.MagicMock(message=mocker.MagicMock(content="Detected text"))
+        ]
     )
     result = run_ocr(base64_images)
     assert result == "Detected text"
     api_client_mock.assert_called_once()
 
 
-def test_run_ocr_no_response_error(api_client_mock, base64_images):
-    api_client_mock.return_value = MagicMock(choices=[None])
+def test_run_ocr_no_response_error(api_client_mock, base64_images, mocker):
+    api_client_mock.return_value = mocker.MagicMock(choices=[None])
     result = run_ocr(base64_images)
     assert result == ""
     api_client_mock.assert_called_once()
 
 
-def test_run_ocr_refusal(api_client_mock, base64_images):
-    api_client_mock.return_value = MagicMock(
+def test_run_ocr_refusal(api_client_mock, base64_images, mocker):
+    api_client_mock.return_value = mocker.MagicMock(
         choices=[
-            MagicMock(message=MagicMock(content="I'm sorry, I cannot do that"))
+            mocker.MagicMock(
+                message=mocker.MagicMock(content="I'm sorry, I cannot do that")
+            )
         ]
     )
     result = run_ocr(base64_images)

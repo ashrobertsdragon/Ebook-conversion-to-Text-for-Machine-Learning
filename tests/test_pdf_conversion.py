@@ -69,8 +69,7 @@ def pdf_converter_with_images(
 class TestPDFConverter:
     def test_pdf_converter_read_file(self, pdf_converter):
         """Test the _read_file method to ensure pages are correctly read."""
-        pages = pdf_converter._read_file(pdf_converter.file_path)
-        assert len(list(pages)) == 7
+        assert len(list(pdf_converter.pages)) == 7
 
     def test_pdf_converter_ends_with_punctuation(self, pdf_converter):
         """Test ends_with_punctuation to confirm sentence end detection."""
@@ -103,7 +102,7 @@ class TestPDFConverter:
     def test_chapter_separator_insertion(self, pdf_converter):
         parsed_text = "".join(pdf_converter.parse_file())
         assert (
-            pdf_converter.CHAPTER_SEPARATOR in parsed_text
+            pdf_converter._chapter_separator in parsed_text
         ), "Chapter separator should be inserted between chapters"
 
     def test_page_combining(self, pdf_converter):

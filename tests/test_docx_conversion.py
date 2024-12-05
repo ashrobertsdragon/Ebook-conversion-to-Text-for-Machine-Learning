@@ -3,12 +3,12 @@ from docx import Document  # constructor
 from docx.oxml import parse_xml
 from docx.text.paragraph import Paragraph
 
-from ebook2text._namespaces import docx_ns_map
 from ebook2text.docx_conversion import (
     DocxConverter,
     DocxImageExtractor,
     DocxTextExtractor,
 )
+from ebook2text.docx_conversion._namespaces import docx_ns_map
 
 
 @pytest.fixture(scope="session")
@@ -85,7 +85,7 @@ def docx_converter_with_image(
 
 def test_read_file(docx_converter):
     """Test that a DOCX file is read and parsed correctly."""
-    paragraphs = list(docx_converter._read_file(docx_converter.file_path))
+    paragraphs = list(docx_converter.paragraphs)
     assert isinstance(paragraphs[0], Paragraph)
     assert paragraphs
 
@@ -120,14 +120,16 @@ def test_extract_images_no_image(
 
 
 def test_build_base64_images_list(
-    docx_image_extractor_with_image, expected_base64_image
+    docx_image_extractor_with_image,
+    docx_paragraph_with_image,
+    expected_base64_image,
 ):
     """
     Test `_build_base64_images_list` method directly to ensure it converts
     image blobs to base64-encoded strings correctly.
     """
-    image_blobs = (
-        docx_image_extractor_with_image._extract_image_blobs()
+    image_blobs = docx_image_extractor_with_image._extract_image_blobs(
+        docx_paragraph_with_image
     )  # Get raw image data
     base64_images = docx_image_extractor_with_image._build_base64_images_list(
         image_blobs
@@ -137,9 +139,13 @@ def test_build_base64_images_list(
     assert base64_images[0] == expected_base64_image
 
 
-def test_extract_images_from_valid_paragraph(docx_image_extractor_with_image):
+def test_extract_images_from_valid_paragraph(
+    docx_image_extractor_with_image, docx_paragraph_with_image
+):
     """Test successful extraction from a paragraph known to contain an image"""
-    blobs = docx_image_extractor_with_image._extract_image_blobs()
+    blobs = docx_image_extractor_with_image._extract_image_blobs(
+        docx_paragraph_with_image
+    )
 
     assert len(blobs) > 0
     assert isinstance(blobs[0], bytes)
@@ -149,8 +155,9 @@ def test_extract_images_from_paragraph_without_images(
     docx_image_extractor, docx_paragraph_without_image
 ):
     """Test extraction from a paragraph known to not contain images"""
-    docx_image_extractor.paragraph = docx_paragraph_without_image
-    blobs = docx_image_extractor._extract_image_blobs()
+    blobs = docx_image_extractor._extract_image_blobs(
+        docx_paragraph_without_image
+    )
 
     assert blobs == []
 
@@ -166,8 +173,9 @@ def test_missing_embed_attribute(
         </a:blip>
     """)
     mock_findall.return_value = [blip]
-    docx_image_extractor.paragraph = docx_paragraph_with_image
-    blobs = docx_image_extractor._extract_image_blobs()
+    blobs = docx_image_extractor._extract_image_blobs(
+        docx_paragraph_with_image
+    )
     assert blobs == []
 
 
