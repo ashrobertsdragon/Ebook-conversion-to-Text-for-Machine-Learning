@@ -33,7 +33,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.urls]
-Respository = "https://github.com/ashrobertsdragon/Ebook-conversion-to-Text-for-Machine-Learning"
+Repository = "https://github.com/ashrobertsdragon/Ebook-conversion-to-Text-for-Machine-Learning"
 
 [build-system]
 requires = ["setuptools>=61"]
