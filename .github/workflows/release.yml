@@ -1,5 +1,5 @@
 name: Release
-# release.yml version: 0.2.0
+# release.yml version: 0.3.0
 
 on:
   push:
@@ -9,6 +9,9 @@ on:
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
 
     steps:
       - name: Checkout code
