@@ -55,6 +55,7 @@ class PDFConverter:
             yield from extract_pages(file_path, maxpages=25)
         except (PDFSyntaxError, OSError) as e:
             logger.error(f"Error reading PDF file: {e}")
+            raise
 
     def ends_with_punctuation(self, text: str) -> bool:
         """Checks if text ends with sentence punctuation"""
