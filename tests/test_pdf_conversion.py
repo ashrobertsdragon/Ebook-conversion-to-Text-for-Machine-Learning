@@ -1,5 +1,6 @@
 import pytest
 from pdfminer.high_level import extract_pages
+from pdfminer.pdfparser import PDFSyntaxError
 
 from ebook2text.abstract_book import ImageExtraction
 from ebook2text.pdf_conversion import (
@@ -70,6 +71,18 @@ class TestPDFConverter:
     def test_pdf_converter_read_file(self, pdf_converter):
         """Test the _read_file method to ensure pages are correctly read."""
         assert len(list(pdf_converter.pages)) == 7
+
+    def test_pdf_converter_catches_pdf_syntax_error(
+        self, pdf_text_extractor, metadata, tmp_path
+    ):
+        """Test the _read_file method to catch PDFSyntaxError."""
+        file_content = b"Not a real PDF"
+        file_name = "test.pdf"
+        file_path = tmp_path / file_name
+        file_path.write_bytes(file_content)
+        pdf_converter = PDFConverter(file_path, metadata, pdf_text_extractor)
+        with pytest.raises(PDFSyntaxError):
+            list(pdf_converter.pages)
 
     def test_pdf_converter_ends_with_punctuation(self, pdf_converter):
         """Test ends_with_punctuation to confirm sentence end detection."""
