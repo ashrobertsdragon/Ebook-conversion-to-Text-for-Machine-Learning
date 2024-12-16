@@ -103,4 +103,4 @@ This project is licensed by ProsePal LLC under the MIT license
   - NEW FEATURE: `convert_file` now has optional `save_file` and `save_path` arguments to allow for custom output filenames or for a string to be returned instead.
 
 - **v2.0.1** (Release date December 16, 2024)
-  - FIX: Re-raise errors raised by PDFConverter._readfile()
+  - FIX: Re-raise errors raised by PDFConverter._readfile(filename)
