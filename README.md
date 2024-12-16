@@ -101,3 +101,6 @@ This project is licensed by ProsePal LLC under the MIT license
   - BREAKING FEATURE: ebook2text now takes Path objects instead of string filenames.
   - BREAKING FEATURE: Converters no longer have a ChapterSplit class. This is handled by the BookConversion class, with no more circular imports.
   - NEW FEATURE: `convert_file` now has optional `save_file` and `save_path` arguments to allow for custom output filenames or for a string to be returned instead.
+
+- **v2.0.1** (Release date December 16, 2024)
+  - FIX: Re-raise errors raised by PDFConverter._readfile()
