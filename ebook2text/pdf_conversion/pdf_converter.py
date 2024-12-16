@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Generator, List
 
 from pdfminer.high_level import extract_pages
+from pdfminer.pdfparser import PDFSyntaxError
 
 from ebook2text import logger
 from ebook2text._types import LTPage
@@ -52,7 +53,7 @@ class PDFConverter:
         """
         try:
             yield from extract_pages(file_path, maxpages=25)
-        except OSError as e:
+        except (PDFSyntaxError, OSError) as e:
             logger.error(f"Error reading PDF file: {e}")
 
     def ends_with_punctuation(self, text: str) -> bool:
