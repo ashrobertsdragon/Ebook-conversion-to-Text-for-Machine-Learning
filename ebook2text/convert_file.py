@@ -30,7 +30,7 @@ def _initialize_converter(
         return initialize_pdf_converter(file_path, metadata)
     elif extension == ".docx":
         return initialize_docx_converter(file_path, metadata)
-    elif extension in {"txt", "text"}:
+    elif extension in {".txt", ".text"}:
         return TextParser(file_path)
     raise ValueError(f"Unsupported file type: {extension}")
 
