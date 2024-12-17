@@ -114,3 +114,6 @@ This project is licensed by ProsePal LLC under the MIT license
 
 - **v2.0.1** (Release date December 16, 2024)
   - FIX: Re-raise errors raised by PDFConverter._readfile(filename)
+
+- **v2.0.2** (Release date December 17, 2024)
+  - FIX: Add missing . to extension name for text files in converter initializer
