@@ -39,7 +39,17 @@ To run this script, you need Python 3.9 or above and the following packages:
 
 ## Contributing
 
-Contributions to this project are welcome. Please use Ruff for formatting to ensure that your code follows the existing style for consistency.
+Contributions to this project are welcome. Please use Ruff for formatting to ensure that your code follows the existing style for consistency, and follow the [ProsePal Open Source Contributor's Code of Contact](https://github.com/ashrobertsdragon/Ebook-conversion-to-Text-for-Machine-Learning/blob/main/prosepal-contributors-code-of-conduct.md).
+
+## TODO
+
+- Increase test coverage
+  - Tests for text converter
+  - More edge cases and failure states
+- Better handling of ebooklib dependency
+- Add additional AI models for OCR as plugins
+- Explore additional filetypes
+- Other options for determining filetype
 
 ## License
 
