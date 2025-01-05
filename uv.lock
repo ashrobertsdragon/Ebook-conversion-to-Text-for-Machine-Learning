@@ -260,10 +260,11 @@ wheels = [
 
 [[package]]
 name = "ebook2text"
-version = "1.1.7"
+version = "2.0.2"
 source = { editable = "." }
 dependencies = [
     { name = "beautifulsoup4" },
+    { name = "ebooklib" },
     { name = "openai" },
     { name = "pdfminer-six" },
     { name = "pillow" },
@@ -280,6 +281,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.12.3" },
+    { name = "ebooklib", git = "https://github.com/aerkalov/ebooklib" },
     { name = "openai", specifier = ">=1.54.3" },
     { name = "pdfminer-six", specifier = ">=20240706" },
     { name = "pillow", specifier = ">=10.4.0" },
@@ -291,6 +293,15 @@ requires-dist = [
 dev = [
     { name = "pytest", specifier = ">=8.3.3" },
     { name = "pytest-mock", specifier = ">=3.14.0" },
+]
+
+[[package]]
+name = "ebooklib"
+version = "0.18"
+source = { git = "https://github.com/aerkalov/ebooklib#e96c5016ee469f68c178d1872fc9ea8e882adcaa" }
+dependencies = [
+    { name = "lxml" },
+    { name = "six" },
 ]
 
 [[package]]
@@ -820,6 +831,15 @@ wheels = [
 ]
 
 [[package]]
+name = "six"
+version = "1.17.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050 },
+]
+
+[[package]]
 name = "sniffio"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -851,7 +871,7 @@ name = "tqdm"
 version = "4.67.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "platform_system == 'Windows'" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e8/4f/0153c21dc5779a49a0598c445b1978126b1344bab9ee71e53e44877e14e0/tqdm-4.67.0.tar.gz", hash = "sha256:fe5a6f95e6fe0b9755e9469b77b9c3cf850048224ecaa8293d7d2d31f97d869a", size = 169739 }
 wheels = [
