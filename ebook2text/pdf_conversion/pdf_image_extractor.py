@@ -143,7 +143,7 @@ class PDFImageExtractor:
             return base64.b64encode(buffered.getvalue()).decode("utf-8")
         except ValueError as e:
             logger.exception(
-                "Failed to create base64 encoded image due to %s", str(e)
+                f"Failed to create base64 encoded image due to {e}"
             )
             return ""
 
@@ -200,7 +200,7 @@ class PDFImageExtractor:
             width, height, mode, stream = self._parse_image_data(obj)
             return self._create_image_from_binary(stream, width, height, mode)
         except (ValueError, AttributeError, TypeError) as e:
-            logger.exception("ValueError: %s", str(e))
+            logger.exception(f"ValueError: {e}")
             return ""
         except ImageTooSmallError:
             new_num, next_attempt = self._find_next_image(obj_num, attempt)
@@ -209,7 +209,7 @@ class PDFImageExtractor:
             logger.info(f"Image too large. Skipping object: {obj_num}")
             return ""
         except Exception as e:
-            logger.exception("Exception: %s", str(e))
+            logger.exception(f"Exception: {e}")
             return ""
 
     def _find_next_image(self, obj_num: int, attempt: int) -> Tuple[int, int]:
