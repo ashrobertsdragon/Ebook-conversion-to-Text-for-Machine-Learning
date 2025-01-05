@@ -203,6 +203,9 @@ class PDFImageExtractor:
             logger.exception(f"ValueError: {e}")
             return ""
         except ImageTooSmallError:
+            # Small amounts of text with an embedded font are stored as a
+            # soft mask to a 2x2 pixel image. This is not a real image, and
+            # the soft mask translates to a bitmap.
             new_num, next_attempt = self._find_next_image(obj_num, attempt)
             return self._get_image(new_num, next_attempt)
         except ImageTooLargeError:
