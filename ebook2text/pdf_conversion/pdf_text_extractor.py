@@ -1,9 +1,10 @@
-from typing import Any, List, Tuple, Union
+from typing import List, Tuple, Union
 
 from pdfminer.pdfdocument import PDFSyntaxError
 
 from ebook2text import logger
-from ebook2text._types import LTChar, LTContainer, LTPage, LTText
+from ebook2text._exceptions import PDFConversionError
+from ebook2text._types import LTChar, LTContainer, LTItem, LTPage, LTText
 from ebook2text.ocr import run_ocr
 from ebook2text.pdf_conversion.pdf_image_extractor import PDFImageExtractor
 
@@ -23,7 +24,14 @@ class PDFTextExtractor:
         self._image_obj_nums: list[int] = []
         self._pdf_text_list: list[str] = []
 
-    def _match_objects(self, obj_type: str, obj_data: Union[int, str]):
+    def _match_objects(self, obj_type: str, obj_data: Union[int, str]) -> None:
+        """
+        Matches objects to their respective types.
+
+        Args:
+            obj_type (str): The type of the object.
+            obj_data (Union[int, str]): The data of the object.
+        """
         match obj_type:
             case "image":
                 self._image_obj_nums.append(int(obj_data))
@@ -88,10 +96,10 @@ class PDFTextExtractor:
             ocr_text = self._extract_image_text(image_obj_nums)
         except PDFSyntaxError as e:
             logger.error(f"PDFMiner error parsing page: {e}")
-            ocr_text = ""
+            raise PDFConversionError from e
         return [ocr_text] + pdf_text_list
 
-    def _process_element(self, element: Any) -> Tuple[str, Union[int, str]]:
+    def _process_element(self, element: LTItem) -> Tuple[str, Union[int, str]]:
         """
         Processes a PDF layout element to identify its type and extract
         relevant data.
@@ -104,7 +112,7 @@ class PDFTextExtractor:
         "other".
 
         Args:
-            element (Any): A PDF layout element from pdfminer.
+            element (LTItem): A PDF layout element from pdfminer.
 
         Returns:
             Tuple[str, Union[int, str]]: A tuple containing the element
@@ -121,6 +129,16 @@ class PDFTextExtractor:
         return "other", ""
 
     def _extract_image_text(self, image_obj_nums: List[int]) -> str:
-        """Collect list of Base64 encoded images and run them through OCR"""
-        base64_images = self.image_extractor.extract_images(image_obj_nums)
+        """
+        Collect list of Base64 encoded images and process with LLM to extract text.
+
+        Args:
+            image_obj_nums (List[int]): List of image object numbers.
+
+        Returns:
+            str: Extracted text from images.
+        """
+        base64_images: List[str] = self.image_extractor.extract_images(
+            image_obj_nums
+        )
         return run_ocr(base64_images)

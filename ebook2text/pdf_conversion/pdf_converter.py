@@ -6,6 +6,7 @@ from pdfminer.high_level import extract_pages
 from pdfminer.pdfparser import PDFSyntaxError
 
 from ebook2text import logger
+from ebook2text._exceptions import PDFConversionError
 from ebook2text._types import LTPage
 from ebook2text.pdf_conversion._enums import LineAction, LineType
 from ebook2text.pdf_conversion.pdf_line_logic import check_line, compare_lines
@@ -55,13 +56,13 @@ class PDFConverter:
             yield from extract_pages(file_path, maxpages=25)
         except (PDFSyntaxError, OSError) as e:
             logger.error(f"Error reading PDF file: {e}")
-            raise
+            raise PDFConversionError from e
 
-    def ends_with_punctuation(self, text: str) -> bool:
+    def _ends_with_punctuation(self, text: str) -> bool:
         """Checks if text ends with sentence punctuation"""
         return text.rstrip().endswith(self.SENTENCE_PUNCTUATION)
 
-    def is_title_page(self, page_lines: list[str]) -> bool:
+    def _is_title_page(self, page_lines: list[str]) -> bool:
         """
         Determines if the page is a title page by comparing the number of lines in
         the page to a threshold.
@@ -69,7 +70,7 @@ class PDFConverter:
         return len(page_lines) < self._max_lines_to_check
 
     @staticmethod
-    def split_line(line: str) -> list[str]:
+    def _split_line(line: str) -> list[str]:
         """Split the line at newline characters."""
         return line.split("\n")
 
@@ -86,8 +87,9 @@ class PDFConverter:
         """
         return desmarten_text(text)
 
-    def add_line_to_page(self, line: str) -> None:
-        self._page.append(line.rstrip() + "\n") if self.ends_with_punctuation(
+    def _add_line_to_page(self, line: str) -> None:
+        """Adds a line to the current page."""
+        self._page.append(line.rstrip() + "\n") if self._ends_with_punctuation(
             line
         ) else self._page.append(line)
 
@@ -101,6 +103,11 @@ class PDFConverter:
 
         Returns:
             str: The processed text of the page.
+
+        Note:
+            Due to limitations of the PDF specification, we can't assume that
+            a newline is a new paragraph, a new page, a new chapter, or just a
+            new line.
         """
         checked: int = 0
         index: int = 0
@@ -134,25 +141,46 @@ class PDFConverter:
                     continue
                 elif action == LineAction.ADD_SEPARATOR:
                     self._page.append(self._chapter_separator)
-            self.add_line_to_page(line)
+            self._add_line_to_page(line)
         # after all lines run through `split_line`
         return "".join(self._page)
 
     @staticmethod
     def remove_extra_whitespace(text: str) -> str:
+        """Remove extra whitespace from the given text."""
         text = re.sub(r"\n+", "\n", text)
         return re.sub(r"[ ]{2,}", " ", text)
 
     def parse_file(self) -> Generator[str, None, None]:
+        """
+        Parse the PDF file and return the parsed text.
+
+        Yields:
+            str: The parsed text of the PDF file.
+        """
         for page in self.pages:
             page_text = self._process_page_text(
                 self._text_extractor.extract_text(page), self.metadata
             )
             self._page = []
             clean_text = self._remove_smart_punctuation(page_text)
-            yield self.remove_extra_whitespace(clean_text)
+            yield self._remove_extra_whitespace(clean_text)
 
     def _clean_before_write(self, text: str, file_path: Path) -> str:
+        """
+        Strips the chapter separator from the text if the file does not exist.
+
+        Args:
+            text (str): The text to be cleaned.
+            file_path (Path): The path to the output file.
+
+        Returns:
+            str: The cleaned text.
+
+        Note:
+            This method is used to strip the leading chapter separator
+            before writing to a file.
+        """
         return (
             text
             if file_path.exists()
@@ -174,7 +202,16 @@ class PDFConverter:
             f.write(cleaned_content)
 
     def return_string(self, generator: Generator[str, None, None]) -> str:
-        """Return the parsed text as a string."""
+        """
+        Return the parsed text as a string.
+
+        Args:
+            generator (Generator[str, None, None]): The content generator
+                that yields the text. This is usually the `parse_file` method.
+
+        Returns:
+            str: The parsed text as a single string.
+        """
         return "".join(line for line in generator if line.strip()).lstrip(
             self._chapter_separator
         )

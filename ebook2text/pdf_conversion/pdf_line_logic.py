@@ -6,6 +6,14 @@ def is_header(line: str, metadata: dict[str, str]) -> bool:
     """
     Determines if the line is part of the page header by checking if it starts
     or ends with the title or author.
+
+    Args:
+        line (str): The line to check.
+        metadata (dict[str, str]): The metadata dictionary.
+
+    Returns:
+        bool: True if the provided string starts or ends with the words
+            'title' or 'author', False otherwise.
     """
     return (
         line.startswith(metadata["title"])
@@ -77,10 +85,9 @@ def compare_lines(
         (LineType.NOT_CHAPTER, LineType.LINE): LineAction.RETURN_EMPTY,
         # NOT_CHAPTER can be on later line
         (LineType.LINE, LineType.NOT_CHAPTER): LineAction.RETURN_EMPTY,
-        # NOT_CHAPTER misidentified as HEADER
         # Probably a Section marker followed by chapter marker
         (LineType.CHAPTER, LineType.CHAPTER): LineAction.ADD_SEPARATOR,
-        # Catching actual chapter marker above
+        # Catching actual chapter marker above line
         (LineType.CHAPTER, LineType.LINE): LineAction.ADD_LINE,
         # Two consecutive lines, just add the line
         (LineType.LINE, LineType.LINE): LineAction.ADD_LINE,

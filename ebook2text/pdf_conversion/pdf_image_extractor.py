@@ -35,6 +35,7 @@ def _expand_bits(data: bytes, bit_depth: int) -> bytes:
 
 
 def _convert_psliteral_to_str(attr: PSLiteral) -> str:
+    """Convert a PSLiteral attribute to string."""
     return str(attr).lstrip("/'").rstrip("'")
 
 
@@ -58,9 +59,6 @@ def _get_pillow_mode(color_space: str) -> str:
 
 
 class PDFImageExtractor:
-    def __init__(self, file_path: Path) -> None:
-        self.file_path = file_path
-
     """
     PDFImageExtractor class for extracting images from PDF objects.
 
@@ -81,6 +79,9 @@ class PDFImageExtractor:
             retrieval.
         Exception: If there is an error in processing the image data.
     """
+
+    def __init__(self, file_path: Path) -> None:
+        self.file_path = file_path
 
     def extract_images(self, obj_nums: List[int]) -> List[str]:
         """
@@ -235,22 +236,44 @@ class PDFImageExtractor:
             100,
         )  # ensure attempt limit is exceeded to stop further attempts
 
-    def _parse_image_data(self, obj) -> Tuple[int, int, str, bytes]:
-        width: int = obj.get("Width", 0)
-        height: int = obj.get("Height", 0)
+    def _parse_image_data(
+        self, stream: PDFStream
+    ) -> Tuple[int, int, str, bytes]:
+        """
+        Parses image data from a PDF object.
+
+        Args:
+            stream (PDFStream): The PDF object to parse.
+
+        Returns:
+            Tuple[int, int, str, bytes]: A tuple containing the width, height,
+                color mode, and binary data of the image.
+        """
+        width: int = stream.get("Width", 0)
+        height: int = stream.get("Height", 0)
         if width < 5 or height < 5:
             raise ImageTooSmallError(
                 "Image too small. Get soft mask from next object"
             )
         if width > 1000 and height > 1000:
             raise ImageTooLargeError("probably full page image")
-        mode, bit_depth = self._extract_color_data(obj)
-        stream = _expand_bits(obj.get_data(), bit_depth)
+        mode, bit_depth = self._extract_color_data(stream)
+        stream = _expand_bits(stream.get_data(), bit_depth)
         return width, height, mode, stream
 
-    def _extract_color_data(self, obj) -> Tuple[str, int]:
-        bit_depth: int = obj.get("BitsPerComponent")
-        color_space: PSLiteral = obj.get("ColorSpace")
+    def _extract_color_data(self, stream: PDFStream) -> Tuple[str, int]:
+        """
+        Extracts color data from a PDF object.
+
+        Args:
+            stream (PDFStream): The PDF object to extract color data from.
+
+        Returns:
+            Tuple[str, int]: A tuple containing the color mode and bit depth
+                of the image.
+        """
+        bit_depth: int = stream.get("BitsPerComponent")
+        color_space: PSLiteral = stream.get("ColorSpace")
         if isinstance(color_space, list):
             color_space = color_space[0]
         mode: str = "1" if bit_depth == 1 else _get_pillow_mode(color_space)
