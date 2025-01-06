@@ -26,3 +26,19 @@ class ImageTooLargeError(ImageSizeError):
 
 class NoResponseError(Exception):
     pass
+
+
+class EbookConversionError(Exception):
+    pass
+
+
+class EbookConversionError(EbookConversionError):
+    pass
+
+
+class PDFConversionError(EbookConversionError):
+    pass
+
+
+class DocxConversionError(EbookConversionError):
+    pass
