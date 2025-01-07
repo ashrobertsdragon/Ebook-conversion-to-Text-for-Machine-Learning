@@ -19,7 +19,8 @@ def _initialize_converter(
         extension (str): The file extension of the book file.
 
     Returns:
-        Union[BookConversion, TextParser]: The initialized converter.
+        Union[DocxConverter, EpubConverter, PDFConverter, TextParser]: The
+            initialized converter.
 
     Raises:
         ValueError: If the file type is not supported.
