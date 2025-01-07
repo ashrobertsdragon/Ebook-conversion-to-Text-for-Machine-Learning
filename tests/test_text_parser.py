@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from ebook2text._exceptions import TextConversionError
 from ebook2text.text_parser import TextParser
 
 
@@ -53,9 +54,9 @@ class TestTextParser:
 
         assert result == "line1\nline2\nline3"
 
-    def test_parse_file_raises_error_when_file_does_not_exist(self, mocker):
+    def test_parse_file_raises_error_when_file_does_not_exist(self):
         non_existent_file = Path("non_existent_file.txt")
         parser = TextParser(non_existent_file)
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(TextConversionError):
             list(parser.parse_file())

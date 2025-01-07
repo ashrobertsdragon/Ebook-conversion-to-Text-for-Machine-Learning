@@ -1,7 +1,7 @@
 import pytest
 from pdfminer.high_level import extract_pages
-from pdfminer.pdfparser import PDFSyntaxError
 
+from ebook2text._exceptions import PDFConversionError
 from ebook2text.pdf_conversion import (
     PDFConverter,
     PDFImageExtractor,
@@ -28,14 +28,14 @@ def pdf_image_extractor(test_pdf_with_images_path):
 
 
 @pytest.fixture
-def fake_image_extractor():
+def fake_image_extractor(test_pdf_with_images_path):
     """Fixture for initializing a fake PDFImageExtractor class for TextExtractor."""
 
     class FakeImageExtraction(PDFImageExtractor):
         def extract_images(self, return_list: list) -> list:
             return return_list
 
-    return FakeImageExtraction()
+    return FakeImageExtraction(file_path=test_pdf_with_images_path)
 
 
 @pytest.fixture
@@ -80,13 +80,13 @@ class TestPDFConverter:
         file_path = tmp_path / file_name
         file_path.write_bytes(file_content)
         pdf_converter = PDFConverter(file_path, metadata, pdf_text_extractor)
-        with pytest.raises(PDFSyntaxError):
+        with pytest.raises(PDFConversionError):
             list(pdf_converter.pages)
 
     def test_pdf_converter_ends_with_punctuation(self, pdf_converter):
         """Test ends_with_punctuation to confirm sentence end detection."""
-        assert pdf_converter.ends_with_punctuation("Hello world!")
-        assert not pdf_converter.ends_with_punctuation("Hello world")
+        assert pdf_converter._ends_with_punctuation("Hello world!")
+        assert not pdf_converter._ends_with_punctuation("Hello world")
 
     def test_parse_file_text_extraction(self, pdf_converter):
         """Test that parse_file extracts only the main content and excludes unwanted sections."""
