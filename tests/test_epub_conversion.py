@@ -75,6 +75,7 @@ class TestEpubConverter:
     ):
         content = "This is a test chapter."
         file_path = tmp_path / "output.txt"
+        file_path.touch()
 
         epub_converter.write_text(content, file_path)
         with file_path.open("r", encoding="utf-8") as f:
