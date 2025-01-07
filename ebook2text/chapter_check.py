@@ -214,7 +214,7 @@ def is_chapter(s: str) -> bool:
 
 def is_not_chapter(paragraph: str, metadata: dict) -> bool:
     """
-    Checks if the given line is not a chapter.
+    Checks if the given text indicates that it is not a chapter.
     """
     title = metadata.get("title", "no title found")
     author = metadata.get("author", "no author found")
