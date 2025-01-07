@@ -166,13 +166,13 @@ class PDFConverter:
             clean_text = self._remove_smart_punctuation(page_text)
             yield self._remove_extra_whitespace(clean_text)
 
-    def _clean_before_write(self, text: str, file_path: Path) -> str:
+    def _clean_before_write(self, text: str, output_path: Path) -> str:
         """
         Strips the chapter separator from the text if the file does not exist.
 
         Args:
             text (str): The text to be cleaned.
-            file_path (Path): The path to the output file.
+            output_path (Path): The path to the output file.
 
         Returns:
             str: The cleaned text.
@@ -183,11 +183,11 @@ class PDFConverter:
         """
         return (
             text
-            if file_path.exists()
+            if output_path.exists()
             else text.lstrip(self._chapter_separator)
         )
 
-    def write_text(self, content: str, file_path: Path) -> None:
+    def write_text(self, content: str, output_path: Path) -> None:
         """
         Write the parsed text to a file.
 
@@ -197,8 +197,8 @@ class PDFConverter:
         """
         if not content.strip():
             return
-        cleaned_content = self._clean_before_write(content, file_path)
-        with file_path.open("a", encoding="utf-8") as f:
+        cleaned_content = self._clean_before_write(content, output_path)
+        with output_path.open("a", encoding="utf-8") as f:
             f.write(cleaned_content)
 
     def return_string(self, generator: Generator[str, None, None]) -> str:
