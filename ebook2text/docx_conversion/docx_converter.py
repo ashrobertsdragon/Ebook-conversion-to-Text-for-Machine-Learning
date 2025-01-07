@@ -2,7 +2,10 @@ from pathlib import Path
 from typing import Generator, Tuple
 
 import docx
+from docx.oxml.exceptions import XmlchemyError
 
+from ebook2text._exceptions import DocxConversionError
+from ebook2text._logger import logger
 from ebook2text._types import Paragraph
 from ebook2text.chapter_check import is_chapter, is_not_chapter
 from ebook2text.docx_conversion.docx_text_extractor import DocxTextExtractor
@@ -46,10 +49,14 @@ class DocxConverter:
         Reads a Word document from the specified file path.
 
         Returns:
-            List[Paragraph]: A list of paragraph objects extracted from the
-                Word document object.
+            Generator[Paragraph]: A generator of paragraph objects extracted
+                from the Word document object.
         """
-        yield from docx.Document(file_path).paragraphs
+        try:
+            yield from docx.Document(file_path).paragraphs
+        except (OSError, ValueError, XmlchemyError) as e:
+            logger.error(f"Error reading Word document: {e}")
+            raise DocxConversionError from e
 
     def parse_file(self) -> Generator[str, None, None]:
         """
@@ -83,19 +90,53 @@ class DocxConverter:
         if current_page:
             yield "\n".join(current_page)
 
-    def write_text(self, content: str, file_path: Path) -> None:
+    def _clean_before_write(self, text: str, output_path: Path) -> str:
+        """
+        Strips the chapter separator from the text if the file does not exist.
+
+        Args:
+            text (str): The text to be cleaned.
+            output_path (Path): The path to the output file.
+
+        Returns:
+            str: The cleaned text.
+
+        Note:
+            This method is used to strip the leading chapter separator
+            before writing to a file.
+        """
+        return (
+            text
+            if output_path.exists()
+            else text.lstrip(self._chapter_separator)
+        )
+
+    def write_text(self, content: str, output_path: Path) -> None:
         """
         Write the parsed text to a file.
 
         Args:
-            text (str): The parsed text to be written to the file.
+            output (str): The parsed text to be written to the file.
+            file_path (Path): The path to the output file.
         """
-        with file_path.open("a", encoding="utf-8") as f:
-            f.write(content + "\n")
+        cleaned_content = self._clean_before_write(content, output_path)
+        with output_path.open("a", encoding="utf-8") as f:
+            f.write(cleaned_content + "\n")
 
     def return_string(self, generator: Generator[str, None, None]) -> str:
-        """Return the parsed text as a string."""
-        return "\n".join(line for line in generator if line.strip())
+        """
+        Return the parsed text as a string.
+
+        Args:
+            generator (Generator[str, None, None]): The content generator
+                that yields the text. This is usually the `parse_file` method.
+
+        Returns:
+            str: The parsed text as a single string.
+        """
+        return "\n".join(line for line in generator if line.strip()).lstrip(
+            self._chapter_separator
+        )
 
     @staticmethod
     def _remove_smart_punctuation(text: str) -> str:
