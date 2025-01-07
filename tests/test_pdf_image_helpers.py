@@ -74,32 +74,22 @@ class TestExpandBits:
 
 
 class TestGetPillowMode:
-    # Returns '1' for DeviceGray with bit depth 1
-    def test_devicegray_bit_depth_1_returns_1(self):
-        result = _get_pillow_mode(bit_depth=1, color_space="DeviceGray")
-        assert result == "1"
-
-    # Returns 'L' for DeviceGray with bit depth other than 1
-    def test_devicegray_other_bit_depth_returns_l(self):
-        result = _get_pillow_mode(bit_depth=8, color_space="DeviceGray")
-        assert result == "L"
-
     # Handle empty color space string
     def test_empty_color_space_returns_rgb(self):
-        result = _get_pillow_mode(bit_depth=8, color_space="")
+        result = _get_pillow_mode(color_space="")
         assert result == "RGB"
 
     # Returns 'RGB' for DeviceRGB color space
     def test_device_rgb_returns_rgb(self):
-        result = _get_pillow_mode(bit_depth=8, color_space="DeviceRGB")
+        result = _get_pillow_mode(color_space="DeviceRGB")
         assert result == "RGB"
 
     # Returns 'CMYK' for DeviceCMYK color space
     def test_devicecmyk_returns_cmyk(self):
-        result = _get_pillow_mode(bit_depth=8, color_space="DeviceCMYK")
+        result = _get_pillow_mode(color_space="DeviceCMYK")
         assert result == "CMYK"
 
     # Returns 'RGB' as default for unknown color spaces
     def test_unknown_color_space_returns_rgb(self):
-        result = _get_pillow_mode(bit_depth=8, color_space="UnknownColorSpace")
+        result = _get_pillow_mode(color_space="UnknownColorSpace")
         assert result == "RGB"
