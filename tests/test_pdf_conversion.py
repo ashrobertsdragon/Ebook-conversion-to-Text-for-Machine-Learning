@@ -2,7 +2,6 @@ import pytest
 from pdfminer.high_level import extract_pages
 from pdfminer.pdfparser import PDFSyntaxError
 
-from ebook2text.abstract_book import ImageExtraction
 from ebook2text.pdf_conversion import (
     PDFConverter,
     PDFImageExtractor,
@@ -30,9 +29,9 @@ def pdf_image_extractor(test_pdf_with_images_path):
 
 @pytest.fixture
 def fake_image_extractor():
-    """Fixture for initializing a fake ImageExtraction class for TextExtractor."""
+    """Fixture for initializing a fake PDFImageExtractor class for TextExtractor."""
 
-    class FakeImageExtraction(ImageExtraction):
+    class FakeImageExtraction(PDFImageExtractor):
         def extract_images(self, return_list: list) -> list:
             return return_list
 
