@@ -1,10 +1,9 @@
 from bs4.element import ResultSet, Tag
 from docx.document import Document
 from docx.text.paragraph import Paragraph
+from ebooklib.epub import EpubBook, EpubItem
 from pdfminer.layout import LTChar, LTContainer, LTPage, LTText
 from pdfminer.pdftypes import PDFStream
-
-from ebook2text.ebooklib.epub import EpubBook, EpubItem
 
 __all__ = [
     "Document",
