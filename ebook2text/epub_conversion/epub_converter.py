@@ -29,7 +29,7 @@ class EpubConverter:
             author information.
         text_extractor (EpubTextExtractor): An instance of EpubTextExtractor
             for extracting text from the EPUB file.
-        chapter_separator (str): The separator used to separate chapters.
+        _chapter_separator (str): The separator used to separate chapters.
         max_lines_to_check (int): The maximum number of lines to check for
             chapter boundaries.
 
@@ -53,7 +53,7 @@ class EpubConverter:
         self.epub_book: EpubBook = self._read_file(file_path)
         self.metadata = metadata
         self.text_extractor = text_extractor
-        self.chapter_separator = "\n***\n"
+        self._chapter_separator = "\n***\n"
         self.max_lines_to_check = 6
 
     def _read_file(self, file_path: Path) -> EpubBook:
@@ -152,7 +152,7 @@ class EpubConverter:
         """
         cleaned_content = self._clean_before_write(content, output_path)
         with output_path.open("a", encoding="utf-8") as f:
-            f.write(cleaned_content)
+            f.write(self._chapter_separator + cleaned_content)
 
     def return_string(self, generator: Generator[str, None, None]) -> str:
         """
@@ -165,4 +165,4 @@ class EpubConverter:
         Returns:
             str: The parsed text as a single string.
         """
-        return f"{self.chapter_separator}".join(generator)
+        return f"{self._chapter_separator}".join(generator)

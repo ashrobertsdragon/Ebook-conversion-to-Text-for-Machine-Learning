@@ -115,7 +115,7 @@ class PDFConverter:
         last_action: LineAction = LineAction.UNINITIALIZED
 
         while index < len(page_lines):
-            split_lines = self.split_line(page_lines[index])
+            split_lines = self._split_line(page_lines[index])
             if len(split_lines) > 1:
                 page_lines[index : index + 1] = split_lines
 
@@ -146,7 +146,7 @@ class PDFConverter:
         return "".join(self._page)
 
     @staticmethod
-    def remove_extra_whitespace(text: str) -> str:
+    def _remove_extra_whitespace(text: str) -> str:
         """Remove extra whitespace from the given text."""
         text = re.sub(r"\n+", "\n", text)
         return re.sub(r"[ ]{2,}", " ", text)

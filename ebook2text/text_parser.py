@@ -10,7 +10,7 @@ from ebook2text.text_utilities import clean_text, desmarten_text
 class TextParser:
     def __init__(self, file_path: Path):
         self.file_path: Path = file_path
-        self.chapter_separator: str = "***"
+        self._chapter_separator: str = "***"
 
     def read_line(self) -> Generator[str, None, None]:
         try:
@@ -29,7 +29,7 @@ class TextParser:
         """
         for line in self.read_line():
             parsed_line = (
-                self.chapter_separator
+                self._chapter_separator
                 if is_chapter(line)
                 else desmarten_text(line)
             )
