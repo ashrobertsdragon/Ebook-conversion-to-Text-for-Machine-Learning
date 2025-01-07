@@ -32,7 +32,7 @@ class EbookConversionError(Exception):
     pass
 
 
-class EbookConversionError(EbookConversionError):
+class EpubConversionError(EbookConversionError):
     pass
 
 
@@ -41,4 +41,8 @@ class PDFConversionError(EbookConversionError):
 
 
 class DocxConversionError(EbookConversionError):
+    pass
+
+
+class TextConversionError(EbookConversionError):
     pass
