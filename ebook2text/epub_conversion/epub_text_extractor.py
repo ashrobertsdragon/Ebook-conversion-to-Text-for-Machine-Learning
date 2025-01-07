@@ -44,6 +44,16 @@ class EpubTextExtractor:
         return [encode_image_bytes(image.get_content())]
 
     def _extract_image_text(self, element: Tag, book: EpubBook) -> str:
+        """
+        Extracts text from an image element.
+
+        Args:
+            element (Tag): The element containing the image data.
+            book (EpubBook): The EpubBook object for accessing image data.
+
+        Returns:
+            str: The extracted text from the image.
+        """
         base64_images: list = self._get_image_file(element, book)
         return run_ocr(base64_images)
 

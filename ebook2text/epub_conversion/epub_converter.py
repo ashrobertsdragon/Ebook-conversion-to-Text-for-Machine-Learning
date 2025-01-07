@@ -1,14 +1,15 @@
 from pathlib import Path
 from typing import Generator
 
+import ebooklib
 from bs4 import BeautifulSoup
+from ebooklib import epub
+from ebooklib.epub import EpubException
 
-import ebook2text.ebooklib as ebooklib
 from ebook2text import logger
+from ebook2text._exceptions import EpubConversionError
 from ebook2text._types import EpubBook, EpubItem, ResultSet, Tag
 from ebook2text.chapter_check import NOT_CHAPTER, is_chapter, is_not_chapter
-from ebook2text.ebooklib import epub
-from ebook2text.ebooklib.epub import EpubException
 from ebook2text.epub_conversion.epub_text_extractor import EpubTextExtractor
 from ebook2text.text_utilities import desmarten_text
 
@@ -17,14 +18,30 @@ class EpubConverter:
     """
     Converts EPUB files to text and splits chapters.
 
-    This class extends the BookConversion abstract class and provides methods
-    for reading EPUB files,extracting text from elements, extracting images,
-    processing chapter text, and splitting chapters.
-
     Args:
         file_path (str): The path to the EPUB file to be read.
         metadata (dict): A dictionary containing metadata such as title and
             author information.
+
+    Attributes:
+        epub_book (EpubBook): The EpubBook object representing the EPUB file.
+        metadata (dict): A dictionary containing metadata such as title and
+            author information.
+        text_extractor (EpubTextExtractor): An instance of EpubTextExtractor
+            for extracting text from the EPUB file.
+        chapter_separator (str): The separator used to separate chapters.
+        max_lines_to_check (int): The maximum number of lines to check for
+            chapter boundaries.
+
+    Methods:
+        _read_file(file_path): Reads an EPUB file using Ebooklib package.
+        _get_items(): Yields items in the Epub file.
+        _process_chapter_text(item): Extracts text from a chapter item.
+        _clean_text(text): Cleans the extracted text.
+        parse_file(): Splits the EPUB file into chapters and returns the
+            cleaned text.
+        write_text(content, file_path): Writes the parsed text to a file.
+        return_string(generator): Returns the parsed text as a string.
     """
 
     def __init__(
@@ -40,16 +57,20 @@ class EpubConverter:
         self.max_lines_to_check = 6
 
     def _read_file(self, file_path: Path) -> EpubBook:
-        """Reads Epub file using Ebooklib package"""
+        """Reads Epub file from the file path using Ebooklib package"""
         try:
             return epub.read_epub(file_path, options={"ignore_ncx": True})
         except EpubException as e:
             logger.error(f"Error reading EPUB file: {e}")
-            raise
+            raise EpubConversionError from e
 
     def _get_items(self) -> Generator[EpubItem, None, None]:
-        """Yields items in the Epub file."""
-        yield from self.epub_book.get_items()
+        """Yields 'items' in the Epub file."""
+        try:
+            yield from self.epub_book.get_items()
+        except EpubException as e:
+            logger.error(f"Error reading EPUB file: {e}")
+            raise EpubConversionError from e
 
     def _process_chapter_text(self, item: EpubItem) -> str:
         """
@@ -89,7 +110,8 @@ class EpubConverter:
         Split the EPUB file into chapters and return the cleaned text.
 
         Returns:
-            str: The cleaned text of the chapters separated by '***'.
+            str: The cleaned text of the chapters separated by the chapter
+                separator.
         """
         for item in self._get_items():
             if (
@@ -99,16 +121,48 @@ class EpubConverter:
                 if chapter_text := self._process_chapter_text(item):
                     yield self.clean_text(chapter_text)
 
-    def write_text(self, content: str, file_path: Path) -> None:
+    def _clean_before_write(self, text: str, output_path: Path) -> str:
+        """
+        Strips the chapter separator from the text if the file does not exist.
+
+        Args:
+            text (str): The text to be cleaned.
+            output_path (Path): The path to the output file.
+
+        Returns:
+            str: The text with the leading chapter separator stripped.
+
+        Note:
+            This method is used to strip the leading chapter separator
+            before writing to a file.
+        """
+        return (
+            text
+            if output_path.exists()
+            else text.lstrip(self._chapter_separator)
+        )
+
+    def write_text(self, content: str, output_path: Path) -> None:
         """
         Write the parsed text to a file.
 
         Args:
-            text (str): The parsed text to be written to the file.
+            output (str): The parsed text to be written to the file.
+            file_path (Path): The path to the output file.
         """
-        with file_path.open("a", encoding="utf-8") as f:
-            f.write(self.chapter_separator + content)
+        cleaned_content = self._clean_before_write(content, output_path)
+        with output_path.open("a", encoding="utf-8") as f:
+            f.write(cleaned_content)
 
     def return_string(self, generator: Generator[str, None, None]) -> str:
-        """Return the parsed text as a string."""
+        """
+        Return the parsed text as a string.
+
+        Args:
+            generator (Generator[str, None, None]): The content generator
+                that yields the text. This is usually the `parse_file` method.
+
+        Returns:
+            str: The parsed text as a single string.
+        """
         return f"{self.chapter_separator}".join(generator)

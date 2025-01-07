@@ -14,7 +14,17 @@ __all__ = [
 ]
 
 
-def initialize_pdf_converter(file_path: Path, metadata: dict):
+def initialize_pdf_converter(file_path: Path, metadata: dict) -> PDFConverter:
+    """
+    Initializes a PDFConverter instance.
+
+    Args:
+        file_path (Path): The path to the PDF file to be read.
+        metadata (dict): A dictionary containing metadata such as title and
+            author information.
+    Returns:
+        PDFConverter: A PDFConverter instance.
+    """
     image_extractor = PDFImageExtractor(file_path)
     text_extractor = PDFTextExtractor(image_extractor)
     return PDFConverter(file_path, metadata, text_extractor)
@@ -25,19 +35,17 @@ def convert_pdf(file_path: Path, metadata: dict) -> Generator[str, None, None]:
     A convenience function that reads a PDF file and splits its content into
     chapters based on chapter boundaries.
     This function initializes a PDFConverter object with the provided file
-    path and metadata. It then calls the 'split_chapters' method of the
-    PDFConverter instance to extract text from the PDF, identify chapter
-    boundaries, and split the content into chapters. The resulting text,
-    representing the split chapters, is returned as a single string.
+    path and metadata. It then calls the 'parse_file' method of the
+    PDFConverter instance to read each page of a PDF file and yield the parsed
+    text as a string in a generator.
     Args:
         file_path (str): The path to the PDF file to be read.
         metadata (dict): A dictionary containing metadata such as title and
             author information.
 
-    Returns:
-        str: The content of the PDF file split into chapters based on chapter
-            boundaries.
+    Yields:
+        str: The parsed text of each page in the PDF file.
     """
-    pdf_converter = initialize_pdf_converter(file_path, metadata)
+    pdf_converter: PDFConverter = initialize_pdf_converter(file_path, metadata)
 
     yield from pdf_converter.parse_file()
