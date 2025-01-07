@@ -63,3 +63,6 @@
 
 - **v2.1.0** (Release date January 7, 2025)
   - Create library-wide exceptions & improve documentation
+
+- **v2.1.1** (Release date January 7, 2025)
+  - Add missing dependency in readme
