@@ -4,4 +4,4 @@ beautifulsoup4
 python-docx
 python-dotenv
 openai
-ebooklib
+ebooklib @ git+https://github.com/ashrobertsdragon/Ebook-conversion-to-Text-for-Machine-Learning
