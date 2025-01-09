@@ -66,3 +66,6 @@
 
 - **v2.1.1** (Release date January 7, 2025)
   - Add missing dependency in readme
+
+- **v2.1.2** (Release date January 8, 2025)
+  - uv adds custom sources to uv-specific section by default where it is not seen by build systems. Ebooklib custom source now directly in dependencies section.
