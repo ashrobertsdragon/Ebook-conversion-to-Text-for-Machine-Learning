@@ -17,7 +17,7 @@ This Python script provides functionality for converting various ebook file form
 To run this script, you need Python 3.9 or above and the following packages:
 
 - `bs4`
-- `ebook2tet`
+- `ebooklib-autoupdate`
 - `pdfminer.six`
 - `pillow`
 - `python-docx`

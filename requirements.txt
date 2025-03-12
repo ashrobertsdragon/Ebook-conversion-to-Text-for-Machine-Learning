@@ -22,7 +22,7 @@ cryptography==44.0.0
     # via pdfminer-six
 distro==1.9.0
     # via openai
-ebooklib @ git+https://github.com/aerkalov/ebooklib@e96c5016ee469f68c178d1872fc9ea8e882adcaa
+ebooklib-autoupdate==0.18.1
     # via ebook2text (pyproject.toml)
 h11==0.14.0
     # via httpcore
